@@ -1,0 +1,330 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordlist Arsenal - Advanced Cybersecurity Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-shield-halved"></i>
+                <h1>Wordlist Arsenal</h1>
+                <span class="version">v2.1.0</span>
+            </div>
+            <div class="developer">
+                <span>Developed by <strong>0x0806</strong></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav-tabs">
+        <button class="nav-tab active" data-tab="dashboard">
+            <i class="fas fa-tachometer-alt"></i>
+            Dashboard
+        </button>
+        <button class="nav-tab" data-tab="generators">
+            <i class="fas fa-cogs"></i>
+            Generators
+        </button>
+        <button class="nav-tab" data-tab="analyzer">
+            <i class="fas fa-search"></i>
+            Analyzer
+        </button>
+        <button class="nav-tab" data-tab="history">
+            <i class="fas fa-history"></i>
+            History
+        </button>
+        <button class="nav-tab" data-tab="tools">
+            <i class="fas fa-wrench"></i>
+            Tools
+        </button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <!-- Stats Section -->
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-list"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="totalGenerated">0</span>
+                        <span class="stat-label">Total Generated</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="activeSessions">1</span>
+                        <span class="stat-label">Active Sessions</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-download"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="totalDownloads">0</span>
+                        <span class="stat-label">Downloads</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="mostUsed">None</span>
+                        <span class="stat-label">Most Used</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <section class="quick-actions">
+                <h2>Quick Actions</h2>
+                <div class="action-grid">
+                    <button class="action-btn" data-generator="passwords">
+                        <i class="fas fa-key"></i>
+                        <span>Password Lists</span>
+                    </button>
+                    <button class="action-btn" data-generator="usernames">
+                        <i class="fas fa-user"></i>
+                        <span>Username Lists</span>
+                    </button>
+                    <button class="action-btn" data-generator="enumeration">
+                        <i class="fas fa-search"></i>
+                        <span>Web Discovery</span>
+                    </button>
+                    <button class="action-btn" data-generator="endpoints">
+                        <i class="fas fa-globe"></i>
+                        <span>API Endpoints</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Recent Activity -->
+            <section class="recent-activity">
+                <h2>Recent Activity</h2>
+                <div class="activity-list" id="activityList">
+                    <div class="activity-item">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Welcome to Wordlist Arsenal! Start generating wordlists above.</span>
+                        <time>Just now</time>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Generators Tab -->
+        <div id="generators" class="tab-content">
+            <div class="generator-sidebar">
+                <h3>Generators</h3>
+                <div class="generator-list">
+                    <button class="generator-btn active" data-generator="enumeration">
+                        <i class="fas fa-search"></i>
+                        Web Discovery
+                    </button>
+                    <button class="generator-btn" data-generator="passwords">
+                        <i class="fas fa-key"></i>
+                        Brute Force
+                    </button>
+                    <button class="generator-btn" data-generator="credentials">
+                        <i class="fas fa-database"></i>
+                        Default Creds
+                    </button>
+                    <button class="generator-btn" data-generator="usernames">
+                        <i class="fas fa-user"></i>
+                        Usernames
+                    </button>
+                    <button class="generator-btn" data-generator="patterns">
+                        <i class="fas fa-puzzle-piece"></i>
+                        Custom Patterns
+                    </button>
+                    <button class="generator-btn" data-generator="hybrid">
+                        <i class="fas fa-random"></i>
+                        Hybrid Combiner
+                    </button>
+                    <button class="generator-btn" data-generator="endpoints">
+                        <i class="fas fa-globe"></i>
+                        API Endpoints
+                    </button>
+                    <button class="generator-btn" data-generator="webtech">
+                        <i class="fas fa-code"></i>
+                        Web Technology
+                    </button>
+                    <button class="generator-btn" data-generator="security">
+                        <i class="fas fa-shield-alt"></i>
+                        Security Testing
+                    </button>
+                </div>
+            </div>
+
+            <div class="generator-content">
+                <!-- Generator panels will be dynamically loaded here -->
+                <div id="generatorPanel" class="generator-panel">
+                    <!-- Default content -->
+                    <div class="panel-header">
+                        <h3>Select a Generator</h3>
+                        <p>Choose a wordlist generator from the sidebar to begin.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analyzer Tab -->
+        <div id="analyzer" class="tab-content">
+            <div class="analyzer-section">
+                <h2>File Analyzer</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h3>Drag & Drop Files Here</h3>
+                        <p>Or click to browse files</p>
+                        <input type="file" id="fileInput" accept=".txt,.csv,.json" multiple hidden>
+                    </div>
+                </div>
+                <div class="analysis-results" id="analysisResults" style="display: none;">
+                    <!-- Analysis results will be displayed here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="history" class="tab-content">
+            <div class="history-section">
+                <div class="history-header">
+                    <h2>Generation History</h2>
+                    <div class="history-actions">
+                        <button class="btn-secondary" id="clearHistory">
+                            <i class="fas fa-trash"></i>
+                            Clear All
+                        </button>
+                        <button class="btn-primary" id="exportHistory">
+                            <i class="fas fa-download"></i>
+                            Export History
+                        </button>
+                    </div>
+                </div>
+                <div class="history-list" id="historyList">
+                    <div class="empty-state">
+                        <i class="fas fa-history"></i>
+                        <h3>No Generation History</h3>
+                        <p>Your wordlist generation history will appear here.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tools Tab -->
+        <div id="tools" class="tab-content">
+            <div class="tools-grid">
+                <div class="tool-card">
+                    <h3><i class="fas fa-filter"></i> Filter & Clean</h3>
+                    <p>Remove duplicates, filter by length, and clean wordlists</p>
+                    <button class="btn-primary" id="filterTool">Open Tool</button>
+                </div>
+                <div class="tool-card">
+                    <h3><i class="fas fa-object-group"></i> Merge Lists</h3>
+                    <p>Combine multiple wordlists into one</p>
+                    <button class="btn-primary" id="mergeTool">Open Tool</button>
+                </div>
+                <div class="tool-card">
+                    <h3><i class="fas fa-magic"></i> Rule Generator</h3>
+                    <p>Generate HashCat and John rules</p>
+                    <button class="btn-primary" id="ruleTool">Open Tool</button>
+                </div>
+                <div class="tool-card">
+                    <h3><i class="fas fa-chart-bar"></i> Statistics</h3>
+                    <p>Analyze wordlist patterns and statistics</p>
+                    <button class="btn-primary" id="statsTool">Open Tool</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Floating Action Button -->
+    <div class="fab" id="fab">
+        <i class="fas fa-plus"></i>
+        <div class="fab-menu" id="fabMenu">
+            <button class="fab-item" data-action="quick-generate">
+                <i class="fas fa-bolt"></i>
+                <span>Quick Generate</span>
+            </button>
+            <button class="fab-item" data-action="import">
+                <i class="fas fa-file-import"></i>
+                <span>Import List</span>
+            </button>
+            <button class="fab-item" data-action="help">
+                <i class="fas fa-question"></i>
+                <span>Help</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Output Panel -->
+    <div class="output-panel" id="outputPanel">
+        <div class="output-header">
+            <h3>Generated Wordlist</h3>
+            <div class="output-actions">
+                <button class="btn-icon" id="copyOutput" title="Copy to Clipboard">
+                    <i class="fas fa-copy"></i>
+                </button>
+                <button class="btn-icon" id="downloadOutput" title="Download">
+                    <i class="fas fa-download"></i>
+                </button>
+                <button class="btn-icon" id="closeOutput" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="output-stats">
+            <span class="stat">Words: <span id="outputCount">0</span></span>
+            <span class="stat">Size: <span id="outputSize">0 B</span></span>
+            <span class="stat">Unique: <span id="outputUnique">0</span></span>
+            <span class="stat">Avg Length: <span id="outputAvgLength">0</span></span>
+        </div>
+        <textarea id="outputContent" readonly placeholder="Generated wordlist will appear here..."></textarea>
+    </div>
+
+    <!-- Progress Indicator -->
+    <div class="progress-indicator" id="progressIndicator">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <span class="progress-text" id="progressText">Generating wordlist...</span>
+    </div>
+
+    <!-- Modal Container -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modal">
+            <!-- Modal content will be dynamically loaded -->
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Disclaimer -->
+    <div class="disclaimer">
+        <div class="disclaimer-content">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span><strong>Ethical Use Only:</strong> This tool is designed for authorized security testing and educational purposes only. Users are responsible for ensuring compliance with applicable laws and regulations.</span>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
