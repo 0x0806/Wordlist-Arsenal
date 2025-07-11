@@ -7,321 +7,621 @@
     <title>Wordlist Arsenal - Advanced Cybersecurity Tool</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="style.css" rel="stylesheet" type="text/css" />
+    <link href="style.css" rel="stylesheet">
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <div class="logo">
-                <i class="fas fa-shield-halved"></i>
-                <h1>Wordlist Arsenal</h1>
-                <span class="version">v2.1.0</span>
-            </div>
-            <div class="developer">
-                <span>Developed by <strong>0x0806</strong></span>
-            </div>
-        </div>
-    </header>
-
-    <!-- Navigation -->
-    <nav class="nav-tabs">
-        <button class="nav-tab active" data-tab="dashboard">
-            <i class="fas fa-tachometer-alt"></i>
-            Dashboard
-        </button>
-        <button class="nav-tab" data-tab="generators">
-            <i class="fas fa-cogs"></i>
-            Generators
-        </button>
-        <button class="nav-tab" data-tab="analyzer">
-            <i class="fas fa-search"></i>
-            Analyzer
-        </button>
-        <button class="nav-tab" data-tab="history">
-            <i class="fas fa-history"></i>
-            History
-        </button>
-        <button class="nav-tab" data-tab="tools">
-            <i class="fas fa-wrench"></i>
-            Tools
-        </button>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Dashboard Tab -->
-        <div id="dashboard" class="tab-content active">
-            <!-- Stats Section -->
-            <section class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-list"></i>
-                    </div>
-                    <div class="stat-info">
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Wordlist Arsenal</span>
+                    <div class="version">by 0x0806</div>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Generated</span>
                         <span class="stat-value" id="totalGenerated">0</span>
-                        <span class="stat-label">Total Generated</span>
                     </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-clock"></i>
+                    <div class="stat-item">
+                        <span class="stat-label">Sessions</span>
+                        <span class="stat-value" id="totalSessions">1</span>
                     </div>
-                    <div class="stat-info">
-                        <span class="stat-value" id="activeSessions">1</span>
-                        <span class="stat-label">Active Sessions</span>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-download"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-value" id="totalDownloads">0</span>
+                    <div class="stat-item">
                         <span class="stat-label">Downloads</span>
+                        <span class="stat-value" id="totalDownloads">0</span>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-star"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-value" id="mostUsed">None</span>
-                        <span class="stat-label">Most Used</span>
-                    </div>
-                </div>
-            </section>
+            </div>
+        </header>
 
-            <!-- Quick Actions -->
-            <section class="quick-actions">
-                <h2>Quick Actions</h2>
-                <div class="action-grid">
-                    <button class="action-btn" data-generator="passwords">
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="quick-actions">
+                    <h3>Quick Actions</h3>
+                    <button class="quick-btn" data-generator="common-passwords">
                         <i class="fas fa-key"></i>
-                        <span>Password Lists</span>
+                        Common Passwords
                     </button>
-                    <button class="action-btn" data-generator="usernames">
+                    <button class="quick-btn" data-generator="web-dirs">
+                        <i class="fas fa-folder"></i>
+                        Web Directories
+                    </button>
+                    <button class="quick-btn" data-generator="usernames">
                         <i class="fas fa-user"></i>
-                        <span>Username Lists</span>
+                        Common Usernames
                     </button>
-                    <button class="action-btn" data-generator="enumeration">
-                        <i class="fas fa-search"></i>
-                        <span>Web Discovery</span>
-                    </button>
-                    <button class="action-btn" data-generator="endpoints">
+                    <button class="quick-btn" data-generator="subdomains">
                         <i class="fas fa-globe"></i>
-                        <span>API Endpoints</span>
+                        Subdomains
                     </button>
                 </div>
-            </section>
 
-            <!-- Recent Activity -->
-            <section class="recent-activity">
-                <h2>Recent Activity</h2>
-                <div class="activity-list" id="activityList">
-                    <div class="activity-item">
-                        <i class="fas fa-info-circle"></i>
-                        <span>Welcome to Wordlist Arsenal! Start generating wordlists above.</span>
-                        <time>Just now</time>
+                <div class="file-upload">
+                    <h3>File Analyzer</h3>
+                    <div class="upload-zone" id="uploadZone">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Drag & Drop files here</p>
+                        <span>or click to browse</span>
+                        <input type="file" id="fileInput" accept=".txt,.csv,.json" multiple>
                     </div>
                 </div>
-            </section>
-        </div>
 
-        <!-- Generators Tab -->
-        <div id="generators" class="tab-content">
-            <div class="generator-sidebar">
-                <h3>Generators</h3>
-                <div class="generator-list">
-                    <button class="generator-btn active" data-generator="enumeration">
+                <div class="history">
+                    <h3>Generation History</h3>
+                    <div class="history-list" id="historyList">
+                        <div class="history-empty">No history yet</div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Panel -->
+            <div class="main-panel">
+                <div class="generator-tabs">
+                    <button class="tab-btn active" data-tab="enumeration">
                         <i class="fas fa-search"></i>
-                        Web Discovery
+                        Enumeration
                     </button>
-                    <button class="generator-btn" data-generator="passwords">
-                        <i class="fas fa-key"></i>
+                    <button class="tab-btn" data-tab="bruteforce">
+                        <i class="fas fa-hammer"></i>
                         Brute Force
                     </button>
-                    <button class="generator-btn" data-generator="credentials">
-                        <i class="fas fa-database"></i>
-                        Default Creds
+                    <button class="tab-btn" data-tab="credentials">
+                        <i class="fas fa-id-card"></i>
+                        Credentials
                     </button>
-                    <button class="generator-btn" data-generator="usernames">
-                        <i class="fas fa-user"></i>
+                    <button class="tab-btn" data-tab="usernames">
+                        <i class="fas fa-users"></i>
                         Usernames
                     </button>
-                    <button class="generator-btn" data-generator="patterns">
-                        <i class="fas fa-puzzle-piece"></i>
-                        Custom Patterns
+                    <button class="tab-btn" data-tab="patterns">
+                        <i class="fas fa-code"></i>
+                        Patterns
                     </button>
-                    <button class="generator-btn" data-generator="hybrid">
+                    <button class="tab-btn" data-tab="hybrid">
                         <i class="fas fa-random"></i>
-                        Hybrid Combiner
+                        Hybrid
                     </button>
-                    <button class="generator-btn" data-generator="endpoints">
-                        <i class="fas fa-globe"></i>
+                    <button class="tab-btn" data-tab="api">
+                        <i class="fas fa-plug"></i>
                         API Endpoints
                     </button>
-                    <button class="generator-btn" data-generator="webtech">
-                        <i class="fas fa-code"></i>
-                        Web Technology
+                    <button class="tab-btn" data-tab="webtech">
+                        <i class="fas fa-code-branch"></i>
+                        Web Tech
                     </button>
-                    <button class="generator-btn" data-generator="security">
-                        <i class="fas fa-shield-alt"></i>
+                    <button class="tab-btn" data-tab="security">
+                        <i class="fas fa-bug"></i>
                         Security Testing
                     </button>
                 </div>
-            </div>
 
-            <div class="generator-content">
-                <!-- Generator panels will be dynamically loaded here -->
-                <div id="generatorPanel" class="generator-panel">
-                    <!-- Default content -->
-                    <div class="panel-header">
-                        <h3>Select a Generator</h3>
-                        <p>Choose a wordlist generator from the sidebar to begin.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Analyzer Tab -->
-        <div id="analyzer" class="tab-content">
-            <div class="analyzer-section">
-                <h2>File Analyzer</h2>
-                <div class="upload-area" id="uploadArea">
-                    <div class="upload-content">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        <h3>Drag & Drop Files Here</h3>
-                        <p>Or click to browse files</p>
-                        <input type="file" id="fileInput" accept=".txt,.csv,.json" multiple hidden>
-                    </div>
-                </div>
-                <div class="analysis-results" id="analysisResults" style="display: none;">
-                    <!-- Analysis results will be displayed here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- History Tab -->
-        <div id="history" class="tab-content">
-            <div class="history-section">
-                <div class="history-header">
-                    <h2>Generation History</h2>
-                    <div class="history-actions">
-                        <button class="btn-secondary" id="clearHistory">
-                            <i class="fas fa-trash"></i>
-                            Clear All
+                <div class="generator-content">
+                    <!-- Enumeration Generator -->
+                    <div class="generator-panel active" id="enumeration">
+                        <h2>Web Discovery Enumeration</h2>
+                        <div class="config-grid">
+                            <div class="config-section">
+                                <h3>Directory Types</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" checked id="enum-common">
+                                    <span>Common Directories</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enum-admin">
+                                    <span>Admin Panels</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enum-backup">
+                                    <span>Backup Files</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enum-config">
+                                    <span>Config Files</span>
+                                </label>
+                            </div>
+                            <div class="config-section">
+                                <h3>File Extensions</h3>
+                                <input type="text" id="enum-extensions" placeholder="php,html,js,txt" class="config-input">
+                                <h3>Custom Paths</h3>
+                                <textarea id="enum-custom" placeholder="Enter custom paths (one per line)" class="config-textarea"></textarea>
+                            </div>
+                        </div>
+                        <button class="generate-btn" onclick="generateEnumeration()">
+                            <i class="fas fa-cog"></i>
+                            Generate Enumeration List
                         </button>
-                        <button class="btn-primary" id="exportHistory">
+                    </div>
+
+                    <!-- Brute Force Generator -->
+                    <div class="generator-panel" id="bruteforce">
+                        <h2>Password Brute Force Lists</h2>
+                        <div class="config-grid">
+                            <div class="config-section">
+                                <h3>Password Types</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" checked id="bf-common">
+                                    <span>Common Passwords</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="bf-numeric">
+                                    <span>Numeric Patterns</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="bf-keyboard">
+                                    <span>Keyboard Patterns</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="bf-dates">
+                                    <span>Date Patterns</span>
+                                </label>
+                            </div>
+                            <div class="config-section">
+                                <h3>Length Range</h3>
+                                <div class="range-inputs">
+                                    <input type="number" id="bf-min" value="4" min="1" max="20" class="config-input">
+                                    <span>to</span>
+                                    <input type="number" id="bf-max" value="12" min="1" max="20" class="config-input">
+                                </div>
+                                <h3>Character Sets</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" checked id="bf-lowercase">
+                                    <span>Lowercase (a-z)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="bf-uppercase">
+                                    <span>Uppercase (A-Z)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="bf-numbers">
+                                    <span>Numbers (0-9)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="bf-special">
+                                    <span>Special Characters</span>
+                                </label>
+                            </div>
+                        </div>
+                        <button class="generate-btn" onclick="generateBruteForce()">
+                            <i class="fas fa-hammer"></i>
+                            Generate Password List
+                        </button>
+                    </div>
+
+                    <!-- Credentials Generator -->
+                    <div class="generator-panel" id="credentials">
+                        <h2>Default Credential Database</h2>
+                        <div class="config-grid">
+                            <div class="config-section">
+                                <h3>Service Types</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" checked id="cred-routers">
+                                    <span>Router Defaults</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="cred-databases">
+                                    <span>Database Systems</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="cred-web">
+                                    <span>Web Applications</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="cred-os">
+                                    <span>Operating Systems</span>
+                                </label>
+                            </div>
+                            <div class="config-section">
+                                <h3>Output Format</h3>
+                                <select id="cred-format" class="config-input">
+                                    <option value="user:pass">user:pass</option>
+                                    <option value="user pass">user pass</option>
+                                    <option value="user/pass">user/pass</option>
+                                    <option value="json">JSON Format</option>
+                                </select>
+                                <h3>Vendor Filter</h3>
+                                <input type="text" id="cred-vendor" placeholder="cisco, netgear, etc." class="config-input">
+                            </div>
+                        </div>
+                        <button class="generate-btn" onclick="generateCredentials()">
+                            <i class="fas fa-id-card"></i>
+                            Generate Credential List
+                        </button>
+                    </div>
+
+                    <!-- Username Generator -->
+                    <div class="generator-panel" id="usernames">
+                        <h2>Username Generator</h2>
+                        <div class="config-grid">
+                            <div class="config-section">
+                                <h3>Name Sources</h3>
+                                <textarea id="user-names" placeholder="Enter names (one per line)&#10;john&#10;jane&#10;admin" class="config-textarea"></textarea>
+                                <h3>Username Patterns</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" checked id="user-firstname">
+                                    <span>First Name</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="user-lastname">
+                                    <span>Last Name</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="user-firstlast">
+                                    <span>First.Last</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="user-flast">
+                                    <span>f.lastname</span>
+                                </label>
+                            </div>
+                            <div class="config-section">
+                                <h3>Mutations</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="user-numbers">
+                                    <span>Add Numbers (1-99)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="user-years">
+                                    <span>Add Years (1980-2024)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="user-common">
+                                    <span>Common Usernames</span>
+                                </label>
+                                <h3>Custom Suffixes</h3>
+                                <input type="text" id="user-suffixes" placeholder="123,admin,test" class="config-input">
+                            </div>
+                        </div>
+                        <button class="generate-btn" onclick="generateUsernames()">
+                            <i class="fas fa-users"></i>
+                            Generate Username List
+                        </button>
+                    </div>
+
+                    <!-- Pattern Generator -->
+                    <div class="generator-panel" id="patterns">
+                        <h2>Custom Pattern Builder</h2>
+                        <div class="config-grid">
+                            <div class="config-section">
+                                <h3>Pattern Definition</h3>
+                                <div class="pattern-help">
+                                    <p>Use placeholders:</p>
+                                    <code>@l</code> - lowercase letter<br>
+                                    <code>@u</code> - uppercase letter<br>
+                                    <code>@d</code> - digit<br>
+                                    <code>@s</code> - special character<br>
+                                    <code>@w</code> - word from wordlist
+                                </div>
+                                <textarea id="pattern-rules" placeholder="Enter patterns (one per line)&#10;@w@d@d@d@d&#10;@u@l@l@l@d@d&#10;password@d@d" class="config-textarea"></textarea>
+                            </div>
+                            <div class="config-section">
+                                <h3>Word List</h3>
+                                <textarea id="pattern-words" placeholder="Enter words for @w placeholder&#10;admin&#10;user&#10;test&#10;password" class="config-textarea"></textarea>
+                                <h3>Iterations</h3>
+                                <input type="number" id="pattern-iterations" value="100" min="1" max="10000" class="config-input">
+                            </div>
+                        </div>
+                        <button class="generate-btn" onclick="generatePatterns()">
+                            <i class="fas fa-code"></i>
+                            Generate Pattern List
+                        </button>
+                    </div>
+
+                    <!-- Hybrid Generator -->
+                    <div class="generator-panel" id="hybrid">
+                        <h2>Hybrid Combiner</h2>
+                        <div class="config-grid">
+                            <div class="config-section">
+                                <h3>Base Wordlist</h3>
+                                <textarea id="hybrid-base" placeholder="Enter base words (one per line)" class="config-textarea"></textarea>
+                                <h3>Combination Rules</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" checked id="hybrid-prepend">
+                                    <span>Prepend Numbers</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="hybrid-append">
+                                    <span>Append Numbers</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="hybrid-years">
+                                    <span>Add Years</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="hybrid-special">
+                                    <span>Add Special Chars</span>
+                                </label>
+                            </div>
+                            <div class="config-section">
+                                <h3>Mutation Options</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="hybrid-leet">
+                                    <span>Leet Speak (3,4,0,1)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="hybrid-case">
+                                    <span>Case Variations</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="hybrid-reverse">
+                                    <span>Reverse Words</span>
+                                </label>
+                                <h3>Custom Additions</h3>
+                                <input type="text" id="hybrid-custom" placeholder="!,@,#,$,%,123,456" class="config-input">
+                            </div>
+                        </div>
+                        <button class="generate-btn" onclick="generateHybrid()">
+                            <i class="fas fa-random"></i>
+                            Generate Hybrid List
+                        </button>
+                    </div>
+
+                    <!-- API Endpoints Generator -->
+                    <div class="generator-panel" id="api">
+                        <h2>API Endpoint Wordlists</h2>
+                        <div class="config-grid">
+                            <div class="config-section">
+                                <h3>API Types</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" checked id="api-rest">
+                                    <span>REST API Endpoints</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="api-graphql">
+                                    <span>GraphQL Endpoints</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="api-soap">
+                                    <span>SOAP Endpoints</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="api-webhooks">
+                                    <span>Webhook Endpoints</span>
+                                </label>
+                            </div>
+                            <div class="config-section">
+                                <h3>HTTP Methods</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" checked id="api-get">
+                                    <span>GET Endpoints</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="api-post">
+                                    <span>POST Endpoints</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="api-put">
+                                    <span>PUT/PATCH Endpoints</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="api-delete">
+                                    <span>DELETE Endpoints</span>
+                                </label>
+                            </div>
+                        </div>
+                        <button class="generate-btn" onclick="generateAPI()">
+                            <i class="fas fa-plug"></i>
+                            Generate API Endpoints
+                        </button>
+                    </div>
+
+                    <!-- Web Technology Generator -->
+                    <div class="generator-panel" id="webtech">
+                        <h2>Web Technology Paths</h2>
+                        <div class="config-grid">
+                            <div class="config-section">
+                                <h3>Frameworks</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" checked id="tech-wordpress">
+                                    <span>WordPress</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tech-drupal">
+                                    <span>Drupal</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tech-joomla">
+                                    <span>Joomla</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tech-magento">
+                                    <span>Magento</span>
+                                </label>
+                            </div>
+                            <div class="config-section">
+                                <h3>Server Technologies</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tech-apache">
+                                    <span>Apache</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tech-nginx">
+                                    <span>Nginx</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tech-tomcat">
+                                    <span>Tomcat</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tech-iis">
+                                    <span>IIS</span>
+                                </label>
+                            </div>
+                        </div>
+                        <button class="generate-btn" onclick="generateWebTech()">
+                            <i class="fas fa-code-branch"></i>
+                            Generate Tech Paths
+                        </button>
+                    </div>
+
+                    <!-- Security Testing Generator -->
+                    <div class="generator-panel" id="security">
+                        <h2>Security Testing Wordlists</h2>
+                        <div class="config-grid">
+                            <div class="config-section">
+                                <h3>Vulnerability Types</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" checked id="sec-sqli">
+                                    <span>SQL Injection</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sec-xss">
+                                    <span>XSS Payloads</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sec-lfi">
+                                    <span>Local File Inclusion</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sec-rfi">
+                                    <span>Remote File Inclusion</span>
+                                </label>
+                            </div>
+                            <div class="config-section">
+                                <h3>Testing Scope</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sec-basic">
+                                    <span>Basic Payloads</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sec-advanced">
+                                    <span>Advanced Payloads</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sec-bypass">
+                                    <span>Filter Bypass</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sec-encoded">
+                                    <span>Encoded Payloads</span>
+                                </label>
+                            </div>
+                        </div>
+                        <button class="generate-btn" onclick="generateSecurity()">
+                            <i class="fas fa-bug"></i>
+                            Generate Security Wordlist
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="results-panel">
+                <div class="results-header">
+                    <h3>Generated Wordlist</h3>
+                    <div class="results-actions">
+                        <button class="action-btn" onclick="copyToClipboard()">
+                            <i class="fas fa-copy"></i>
+                            Copy
+                        </button>
+                        <button class="action-btn" onclick="downloadWordlist()">
                             <i class="fas fa-download"></i>
-                            Export History
+                            Download
+                        </button>
+                        <button class="action-btn" onclick="saveToHistory()">
+                            <i class="fas fa-save"></i>
+                            Save
                         </button>
                     </div>
                 </div>
-                <div class="history-list" id="historyList">
-                    <div class="empty-state">
-                        <i class="fas fa-history"></i>
-                        <h3>No Generation History</h3>
-                        <p>Your wordlist generation history will appear here.</p>
+                <div class="results-stats">
+                    <div class="stat">
+                        <span class="stat-label">Count:</span>
+                        <span class="stat-value" id="wordCount">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Size:</span>
+                        <span class="stat-value" id="fileSize">0 B</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Unique:</span>
+                        <span class="stat-value" id="uniqueCount">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Avg Length:</span>
+                        <span class="stat-value" id="avgLength">0</span>
+                    </div>
+                </div>
+                <div class="results-content">
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <textarea id="resultsTextarea" placeholder="Generated wordlist will appear here..." readonly></textarea>
+                </div>
+            </div>
+        </main>
+
+        <!-- Floating Action Button -->
+        <div class="fab" onclick="showHelp()">
+            <i class="fas fa-question"></i>
+        </div>
+
+        <!-- Toast Container -->
+        <div class="toast-container" id="toastContainer"></div>
+
+        <!-- Modal -->
+        <div class="modal" id="helpModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Wordlist Arsenal Help</h2>
+                    <button class="modal-close" onclick="hideHelp()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="help-section">
+                        <h3>⚠️ Ethical Use Disclaimer</h3>
+                        <p>This tool is designed for authorized security testing and educational purposes only. Users are responsible for ensuring they have proper authorization before testing any systems. Unauthorized access to computer systems is illegal and unethical.</p>
+                    </div>
+                    <div class="help-section">
+                        <h3>🛡️ Generator Types</h3>
+                        <ul>
+                            <li><strong>Enumeration:</strong> Web directory and file discovery</li>
+                            <li><strong>Brute Force:</strong> Password attack wordlists</li>
+                            <li><strong>Credentials:</strong> Default username/password combinations</li>
+                            <li><strong>Usernames:</strong> Generate username variations</li>
+                            <li><strong>Patterns:</strong> Custom pattern-based generation</li>
+                            <li><strong>Hybrid:</strong> Combine and mutate existing wordlists</li>
+                            <li><strong>API:</strong> Common API endpoint paths</li>
+                            <li><strong>Web Tech:</strong> Framework-specific paths</li>
+                            <li><strong>Security:</strong> Vulnerability testing payloads</li>
+                        </ul>
+                    </div>
+                    <div class="help-section">
+                        <h3>📋 Usage Tips</h3>
+                        <ul>
+                            <li>Use Quick Actions for common wordlists</li>
+                            <li>Upload existing wordlists for analysis</li>
+                            <li>Combine multiple generators for comprehensive testing</li>
+                            <li>Save frequently used configurations in history</li>
+                            <li>Use pattern placeholders for custom generation</li>
+                        </ul>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Tools Tab -->
-        <div id="tools" class="tab-content">
-            <div class="tools-grid">
-                <div class="tool-card">
-                    <h3><i class="fas fa-filter"></i> Filter & Clean</h3>
-                    <p>Remove duplicates, filter by length, and clean wordlists</p>
-                    <button class="btn-primary" id="filterTool">Open Tool</button>
-                </div>
-                <div class="tool-card">
-                    <h3><i class="fas fa-object-group"></i> Merge Lists</h3>
-                    <p>Combine multiple wordlists into one</p>
-                    <button class="btn-primary" id="mergeTool">Open Tool</button>
-                </div>
-                <div class="tool-card">
-                    <h3><i class="fas fa-magic"></i> Rule Generator</h3>
-                    <p>Generate HashCat and John rules</p>
-                    <button class="btn-primary" id="ruleTool">Open Tool</button>
-                </div>
-                <div class="tool-card">
-                    <h3><i class="fas fa-chart-bar"></i> Statistics</h3>
-                    <p>Analyze wordlist patterns and statistics</p>
-                    <button class="btn-primary" id="statsTool">Open Tool</button>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Floating Action Button -->
-    <div class="fab" id="fab">
-        <i class="fas fa-plus"></i>
-        <div class="fab-menu" id="fabMenu">
-            <button class="fab-item" data-action="quick-generate">
-                <i class="fas fa-bolt"></i>
-                <span>Quick Generate</span>
-            </button>
-            <button class="fab-item" data-action="import">
-                <i class="fas fa-file-import"></i>
-                <span>Import List</span>
-            </button>
-            <button class="fab-item" data-action="help">
-                <i class="fas fa-question"></i>
-                <span>Help</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- Output Panel -->
-    <div class="output-panel" id="outputPanel">
-        <div class="output-header">
-            <h3>Generated Wordlist</h3>
-            <div class="output-actions">
-                <button class="btn-icon" id="copyOutput" title="Copy to Clipboard">
-                    <i class="fas fa-copy"></i>
-                </button>
-                <button class="btn-icon" id="downloadOutput" title="Download">
-                    <i class="fas fa-download"></i>
-                </button>
-                <button class="btn-icon" id="closeOutput" title="Close">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>
-        <div class="output-stats">
-            <span class="stat">Words: <span id="outputCount">0</span></span>
-            <span class="stat">Size: <span id="outputSize">0 B</span></span>
-            <span class="stat">Unique: <span id="outputUnique">0</span></span>
-            <span class="stat">Avg Length: <span id="outputAvgLength">0</span></span>
-        </div>
-        <textarea id="outputContent" readonly placeholder="Generated wordlist will appear here..."></textarea>
-    </div>
-
-    <!-- Progress Indicator -->
-    <div class="progress-indicator" id="progressIndicator">
-        <div class="progress-bar">
-            <div class="progress-fill" id="progressFill"></div>
-        </div>
-        <span class="progress-text" id="progressText">Generating wordlist...</span>
-    </div>
-
-    <!-- Modal Container -->
-    <div class="modal-overlay" id="modalOverlay">
-        <div class="modal" id="modal">
-            <!-- Modal content will be dynamically loaded -->
-        </div>
-    </div>
-
-    <!-- Toast Container -->
-    <div class="toast-container" id="toastContainer"></div>
-
-    <!-- Disclaimer -->
-    <div class="disclaimer">
-        <div class="disclaimer-content">
-            <i class="fas fa-exclamation-triangle"></i>
-            <span><strong>Ethical Use Only:</strong> This tool is designed for authorized security testing and educational purposes only. Users are responsible for ensuring compliance with applicable laws and regulations.</span>
         </div>
     </div>
 
