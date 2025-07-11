@@ -15,6 +15,8 @@ class WordlistArsenal {
             generatorUsage: {}
         };
         this.generatedWordlists = [];
+        this.currentWordlist = null;
+        this.progressInterval = null;
         
         this.init();
     }
@@ -30,37 +32,43 @@ class WordlistArsenal {
         // Tab navigation
         document.querySelectorAll('.nav-tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
-                this.switchTab(e.target.dataset.tab);
+                const tabName = e.target.getAttribute('data-tab') || e.target.closest('.nav-tab').getAttribute('data-tab');
+                this.switchTab(tabName);
             });
         });
 
         // Generator selection
         document.querySelectorAll('.generator-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.switchGenerator(e.target.dataset.generator);
+                const generatorName = e.target.getAttribute('data-generator') || e.target.closest('.generator-btn').getAttribute('data-generator');
+                this.switchGenerator(generatorName);
             });
         });
 
         // Quick action buttons
         document.querySelectorAll('.action-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                const generatorName = e.target.getAttribute('data-generator') || e.target.closest('.action-btn').getAttribute('data-generator');
                 this.switchTab('generators');
-                this.switchGenerator(e.target.dataset.generator);
+                this.switchGenerator(generatorName);
             });
         });
 
         // FAB menu
         const fab = document.getElementById('fab');
         const fabMenu = document.getElementById('fabMenu');
-        fab.addEventListener('click', () => {
-            fab.classList.toggle('active');
-            fabMenu.classList.toggle('active');
-        });
+        if (fab && fabMenu) {
+            fab.addEventListener('click', () => {
+                fab.classList.toggle('active');
+                fabMenu.classList.toggle('active');
+            });
+        }
 
         // FAB menu items
         document.querySelectorAll('.fab-item').forEach(item => {
             item.addEventListener('click', (e) => {
-                this.handleFabAction(e.target.closest('.fab-item').dataset.action);
+                const action = e.target.getAttribute('data-action') || e.target.closest('.fab-item').getAttribute('data-action');
+                this.handleFabAction(action);
             });
         });
 
@@ -84,28 +92,46 @@ class WordlistArsenal {
         });
     }
 
+    setupGenerators() {
+        // Initialize with default generator
+        this.loadGeneratorPanel(this.currentGenerator);
+    }
+
     switchTab(tabName) {
+        if (!tabName) return;
+        
         // Update tab buttons
         document.querySelectorAll('.nav-tab').forEach(tab => {
             tab.classList.remove('active');
         });
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
+        if (activeTab) {
+            activeTab.classList.add('active');
+        }
 
         // Update tab content
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.remove('active');
         });
-        document.getElementById(tabName).classList.add('active');
+        const activeContent = document.getElementById(tabName);
+        if (activeContent) {
+            activeContent.classList.add('active');
+        }
 
         this.currentTab = tabName;
     }
 
     switchGenerator(generatorName) {
+        if (!generatorName) return;
+        
         // Update generator buttons
         document.querySelectorAll('.generator-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        document.querySelector(`[data-generator="${generatorName}"]`).classList.add('active');
+        const activeBtn = document.querySelector(`[data-generator="${generatorName}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
 
         // Load generator panel
         this.loadGeneratorPanel(generatorName);
@@ -114,6 +140,8 @@ class WordlistArsenal {
 
     loadGeneratorPanel(generatorName) {
         const panel = document.getElementById('generatorPanel');
+        if (!panel) return;
+
         const generators = {
             enumeration: this.createEnumerationPanel(),
             passwords: this.createPasswordPanel(),
@@ -770,7 +798,7 @@ user"></textarea>
                     <span class="preview-count">0 entries</span>
                 </div>
                 <div class="preview-content" id="securityPreview">
-                    <script>alert('XSS')</script>
+                    &lt;script&gt;alert('XSS')&lt;/script&gt;
                     ' OR '1'='1
                     ../../../etc/passwd
                     ; cat /etc/passwd
@@ -791,15 +819,20 @@ user"></textarea>
 
     setupGeneratorEvents(generatorName) {
         // Add event listeners for real-time preview updates
-        const inputs = document.querySelectorAll('#generatorPanel input, #generatorPanel select, #generatorPanel textarea');
-        inputs.forEach(input => {
-            input.addEventListener('input', () => {
-                this.updatePreview(generatorName);
+        setTimeout(() => {
+            const inputs = document.querySelectorAll('#generatorPanel input, #generatorPanel select, #generatorPanel textarea');
+            inputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    this.updatePreview(generatorName);
+                });
+                input.addEventListener('change', () => {
+                    this.updatePreview(generatorName);
+                });
             });
-            input.addEventListener('change', () => {
-                this.updatePreview(generatorName);
-            });
-        });
+            
+            // Initial preview update
+            this.updatePreview(generatorName);
+        }, 100);
     }
 
     updatePreview(generatorName) {
@@ -810,27 +843,43 @@ user"></textarea>
             
             if (previewElement && countElement) {
                 const sampleData = this.generateSampleData(generatorName);
-                previewElement.textContent = sampleData.slice(0, 10).join('\n') + '\n...';
+                previewElement.textContent = sampleData.slice(0, 10).join('\n') + (sampleData.length > 10 ? '\n...' : '');
                 countElement.textContent = `${sampleData.length} entries`;
             }
         }, 100);
     }
 
     generateSampleData(generatorName) {
-        // Generate sample data for preview
+        // Generate sample data for preview based on current form values
         const samples = {
-            enumeration: ['admin', 'backup', 'config', 'login', 'test', 'uploads', 'images', 'scripts', 'styles', 'data'],
-            passwords: ['Password123', 'admin2024', 'user!', 'Company1', 'test456', 'login2024', 'secure@123', 'admin!@#'],
-            credentials: ['admin:admin', 'admin:password', 'root:root', 'admin:123456', 'user:user', 'test:test'],
-            usernames: ['john.smith', 'j.smith', 'smith.john', 'john', 'jane.doe', 'j.doe', 'doe.jane', 'jane'],
-            patterns: ['admin123', 'test456', 'user789', 'pass!@#', 'login$%^', 'secure&*('],
-            hybrid: ['password123', '123password', 'admin2024', '2024admin', 'user!@#', '!@#user'],
-            endpoints: ['/api/v1/auth/login', '/api/v1/users', '/api/v1/admin/config', '/api/v1/files/upload'],
-            webtech: ['/wp-admin/', '/wp-config.php', '/admin/', '/config/database.yml', '/debug/', '/logs/'],
-            security: ['<script>alert("XSS")</script>', "' OR '1'='1", '../../../etc/passwd', '; cat /etc/passwd']
+            enumeration: () => {
+                const tech = document.getElementById('enumTech')?.value || 'generic';
+                const base = ['admin', 'backup', 'config', 'login', 'test', 'uploads', 'images', 'scripts', 'styles', 'data'];
+                return tech === 'php' ? [...base, 'index.php', 'config.php', 'admin.php'] : base;
+            },
+            passwords: () => {
+                const base = document.getElementById('passBase')?.value?.split('\n').filter(w => w.trim()) || ['password', 'admin', 'user'];
+                return base.slice(0, 3).map(w => w + '123');
+            },
+            credentials: () => ['admin:admin', 'admin:password', 'root:root', 'admin:123456', 'user:user', 'test:test'],
+            usernames: () => {
+                const first = document.getElementById('userFirst')?.value?.split('\n').filter(w => w.trim()) || ['john', 'jane'];
+                const last = document.getElementById('userLast')?.value?.split('\n').filter(w => w.trim()) || ['smith', 'doe'];
+                return first.slice(0, 2).map(f => last.slice(0, 2).map(l => f + '.' + l)).flat();
+            },
+            patterns: () => ['admin123', 'test456', 'user789', 'pass!@#', 'login$%^', 'secure&*('],
+            hybrid: () => {
+                const primary = document.getElementById('hybridPrimary')?.value?.split('\n').filter(w => w.trim()) || ['password'];
+                const secondary = document.getElementById('hybridSecondary')?.value?.split('\n').filter(w => w.trim()) || ['123'];
+                return primary.slice(0, 2).map(p => secondary.slice(0, 2).map(s => [p + s, s + p])).flat(2);
+            },
+            endpoints: () => ['/api/v1/auth/login', '/api/v1/users', '/api/v1/admin/config', '/api/v1/files/upload', '/api/v1/data/export'],
+            webtech: () => ['/wp-admin/', '/wp-config.php', '/admin/', '/config/database.yml', '/debug/', '/logs/'],
+            security: () => ['<script>alert("XSS")</script>', "' OR '1'='1", '../../../etc/passwd', '; cat /etc/passwd', '%3Cscript%3Ealert%28%22XSS%22%29%3C%2Fscript%3E']
         };
         
-        return samples[generatorName] || ['sample1', 'sample2', 'sample3'];
+        const generator = samples[generatorName];
+        return generator ? generator() : ['sample1', 'sample2', 'sample3'];
     }
 
     // Generator methods
@@ -865,7 +914,7 @@ user"></textarea>
             
             if (extensions && includeFiles) {
                 const exts = extensions.split(',').map(e => e.trim().replace(/^\./, ''));
-                const baseWords = ['index', 'admin', 'test', 'login', 'config', 'main', 'app'];
+                const baseWords = ['index', 'admin', 'test', 'login', 'config', 'main', 'app', 'home', 'default', 'search'];
                 exts.forEach(ext => {
                     baseWords.forEach(base => {
                         wordlist.push(`${base}.${ext}`);
@@ -883,7 +932,7 @@ user"></textarea>
         this.showProgress('Generating password wordlist...');
         
         setTimeout(() => {
-            const baseWords = document.getElementById('passBase')?.value.split('\n').filter(w => w.trim()) || ['password', 'admin', 'user'];
+            const baseWords = document.getElementById('passBase')?.value.split('\n').filter(w => w.trim()) || ['password', 'admin', 'user', 'login'];
             const addNumbers = document.getElementById('passNumbers')?.checked || false;
             const addYears = document.getElementById('passYears')?.checked || false;
             const addSpecial = document.getElementById('passSpecial')?.checked || false;
@@ -909,7 +958,7 @@ user"></textarea>
                     }
                     
                     if (addNumbers) {
-                        for (let i = 0; i <= 99; i++) {
+                        for (let i = 0; i <= 999; i++) {
                             const combo = variant + i;
                             if (combo.length >= minLen && combo.length <= maxLen) {
                                 wordlist.push(combo);
@@ -918,7 +967,7 @@ user"></textarea>
                     }
                     
                     if (addYears) {
-                        for (let year = 2020; year <= 2024; year++) {
+                        for (let year = 1990; year <= 2024; year++) {
                             const combo = variant + year;
                             if (combo.length >= minLen && combo.length <= maxLen) {
                                 wordlist.push(combo);
@@ -927,7 +976,7 @@ user"></textarea>
                     }
                     
                     if (addSpecial) {
-                        const special = ['!', '@', '#', '$', '%'];
+                        const special = ['!', '@', '#', '$', '%', '&', '*'];
                         special.forEach(char => {
                             const combo = variant + char;
                             if (combo.length >= minLen && combo.length <= maxLen) {
@@ -938,7 +987,7 @@ user"></textarea>
                 });
             });
             
-            this.displayWordlist(wordlist, 'Brute Force Passwords');
+            this.displayWordlist([...new Set(wordlist)], 'Brute Force Passwords');
             this.updateStats('passwords', wordlist.length);
             this.hideProgress();
         }, 2000);
@@ -949,7 +998,33 @@ user"></textarea>
         
         setTimeout(() => {
             const format = document.getElementById('credFormat')?.value || 'colon';
-            const credentials = this.getDefaultCredentials();
+            const includeGeneric = document.getElementById('credGeneric')?.checked || false;
+            const includeRouters = document.getElementById('credRouters')?.checked || false;
+            const includeDatabases = document.getElementById('credDatabases')?.checked || false;
+            const includeApps = document.getElementById('credApps')?.checked || false;
+            const includeIoT = document.getElementById('credIoT')?.checked || false;
+            const includeCameras = document.getElementById('credCameras')?.checked || false;
+            
+            let credentials = [];
+            
+            if (includeGeneric) {
+                credentials.push(...this.getDefaultCredentials().generic);
+            }
+            if (includeRouters) {
+                credentials.push(...this.getDefaultCredentials().routers);
+            }
+            if (includeDatabases) {
+                credentials.push(...this.getDefaultCredentials().databases);
+            }
+            if (includeApps) {
+                credentials.push(...this.getDefaultCredentials().apps);
+            }
+            if (includeIoT) {
+                credentials.push(...this.getDefaultCredentials().iot);
+            }
+            if (includeCameras) {
+                credentials.push(...this.getDefaultCredentials().cameras);
+            }
             
             let wordlist = [];
             credentials.forEach(cred => {
@@ -969,7 +1044,7 @@ user"></textarea>
                 }
             });
             
-            this.displayWordlist(wordlist, 'Default Credentials');
+            this.displayWordlist([...new Set(wordlist)], 'Default Credentials');
             this.updateStats('credentials', wordlist.length);
             this.hideProgress();
         }, 1000);
@@ -979,8 +1054,8 @@ user"></textarea>
         this.showProgress('Generating username list...');
         
         setTimeout(() => {
-            const firstNames = document.getElementById('userFirst')?.value.split('\n').filter(w => w.trim()) || ['john', 'jane'];
-            const lastNames = document.getElementById('userLast')?.value.split('\n').filter(w => w.trim()) || ['smith', 'doe'];
+            const firstNames = document.getElementById('userFirst')?.value.split('\n').filter(w => w.trim()) || ['john', 'jane', 'mike', 'sarah'];
+            const lastNames = document.getElementById('userLast')?.value.split('\n').filter(w => w.trim()) || ['smith', 'doe', 'johnson', 'williams'];
             const company = document.getElementById('userCompany')?.value.trim() || '';
             
             let wordlist = [];
@@ -995,12 +1070,17 @@ user"></textarea>
                     
                     if (document.getElementById('userFirstLast')?.checked) {
                         wordlist.push(`${first}.${last}`);
+                        wordlist.push(`${first}_${last}`);
+                        wordlist.push(`${first}${last}`);
                     }
                     if (document.getElementById('userFirstInitial')?.checked) {
                         wordlist.push(`${first.charAt(0)}.${last}`);
+                        wordlist.push(`${first.charAt(0)}${last}`);
                     }
                     if (document.getElementById('userLastFirst')?.checked) {
                         wordlist.push(`${last}.${first}`);
+                        wordlist.push(`${last}_${first}`);
+                        wordlist.push(`${last}${first}`);
                     }
                 });
                 
@@ -1010,12 +1090,15 @@ user"></textarea>
             });
             
             if (company) {
-                wordlist.push(company);
-                wordlist.push(`${company}admin`);
-                wordlist.push(`admin${company}`);
+                const companyLower = company.toLowerCase();
+                wordlist.push(companyLower);
+                wordlist.push(`${companyLower}admin`);
+                wordlist.push(`admin${companyLower}`);
+                wordlist.push(`${companyLower}user`);
+                wordlist.push(`user${companyLower}`);
             }
             
-            this.displayWordlist(wordlist, 'Username List');
+            this.displayWordlist([...new Set(wordlist)], 'Username List');
             this.updateStats('usernames', wordlist.length);
             this.hideProgress();
         }, 1000);
@@ -1026,7 +1109,8 @@ user"></textarea>
         
         setTimeout(() => {
             const template = document.getElementById('patternTemplate')?.value || '?w?d?d?d';
-            const words = document.getElementById('patternWords')?.value.split('\n').filter(w => w.trim()) || ['admin', 'test'];
+            const words = document.getElementById('patternWords')?.value.split('\n').filter(w => w.trim()) || ['admin', 'test', 'user', 'pass'];
+            const specialChars = document.getElementById('patternSpecial')?.value || '!@#$%^&*';
             const doReverse = document.getElementById('patternReverse')?.checked || false;
             const doCase = document.getElementById('patternCase')?.checked || false;
             const doLeet = document.getElementById('patternLeet')?.checked || false;
@@ -1039,27 +1123,31 @@ user"></textarea>
                 
                 let wordVariations = [word];
                 if (doReverse) wordVariations.push(word.split('').reverse().join(''));
-                if (doCase) wordVariations.push(word.toUpperCase(), word.toLowerCase());
+                if (doCase) {
+                    wordVariations.push(word.toUpperCase());
+                    wordVariations.push(word.toLowerCase());
+                    wordVariations.push(word.charAt(0).toUpperCase() + word.slice(1));
+                }
                 if (doLeet) {
                     const leetWord = word.replace(/a/gi, '@').replace(/e/gi, '3').replace(/i/gi, '1').replace(/o/gi, '0').replace(/s/gi, '$');
                     wordVariations.push(leetWord);
                 }
                 
                 wordVariations.forEach(wordVar => {
-                    // Generate multiple pattern instances
-                    for (let i = 0; i < 5; i++) {
+                    // Generate pattern instances
+                    for (let i = 0; i < 10; i++) {
                         let result = template.replace(/\?w/g, wordVar);
                         result = result.replace(/\?d/g, () => Math.floor(Math.random() * 10));
                         result = result.replace(/\?l/g, () => String.fromCharCode(97 + Math.floor(Math.random() * 26)));
                         result = result.replace(/\?u/g, () => String.fromCharCode(65 + Math.floor(Math.random() * 26)));
-                        result = result.replace(/\?s/g, () => '!@#$%^&*'[Math.floor(Math.random() * 8)]);
+                        result = result.replace(/\?s/g, () => specialChars[Math.floor(Math.random() * specialChars.length)]);
                         
                         wordlist.push(result);
                     }
                 });
             });
             
-            this.displayWordlist(wordlist, 'Custom Patterns');
+            this.displayWordlist([...new Set(wordlist)], 'Custom Patterns');
             this.updateStats('patterns', wordlist.length);
             this.hideProgress();
         }, 1500);
@@ -1069,8 +1157,12 @@ user"></textarea>
         this.showProgress('Generating hybrid wordlist...');
         
         setTimeout(() => {
-            const primary = document.getElementById('hybridPrimary')?.value.split('\n').filter(w => w.trim()) || ['password'];
-            const secondary = document.getElementById('hybridSecondary')?.value.split('\n').filter(w => w.trim()) || ['123'];
+            const primary = document.getElementById('hybridPrimary')?.value.split('\n').filter(w => w.trim()) || ['password', 'admin', 'user'];
+            const secondary = document.getElementById('hybridSecondary')?.value.split('\n').filter(w => w.trim()) || ['123', '2024', '!@#'];
+            const doAppend = document.getElementById('hybridAppend')?.checked || false;
+            const doPrepend = document.getElementById('hybridPrepend')?.checked || false;
+            const doInsert = document.getElementById('hybridInsert')?.checked || false;
+            const doToggleCase = document.getElementById('hybridToggleCase')?.checked || false;
             
             let wordlist = [];
             
@@ -1082,20 +1174,31 @@ user"></textarea>
                     s = s.trim();
                     if (!s) return;
                     
-                    if (document.getElementById('hybridAppend')?.checked) {
-                        wordlist.push(p + s);
+                    let combinations = [];
+                    
+                    if (doAppend) {
+                        combinations.push(p + s);
                     }
-                    if (document.getElementById('hybridPrepend')?.checked) {
-                        wordlist.push(s + p);
+                    if (doPrepend) {
+                        combinations.push(s + p);
                     }
-                    if (document.getElementById('hybridInsert')?.checked) {
+                    if (doInsert) {
                         const mid = Math.floor(p.length / 2);
-                        wordlist.push(p.slice(0, mid) + s + p.slice(mid));
+                        combinations.push(p.slice(0, mid) + s + p.slice(mid));
                     }
+                    
+                    combinations.forEach(combo => {
+                        wordlist.push(combo);
+                        if (doToggleCase) {
+                            wordlist.push(combo.toUpperCase());
+                            wordlist.push(combo.toLowerCase());
+                            wordlist.push(combo.charAt(0).toUpperCase() + combo.slice(1));
+                        }
+                    });
                 });
             });
             
-            this.displayWordlist(wordlist, 'Hybrid Combinations');
+            this.displayWordlist([...new Set(wordlist)], 'Hybrid Combinations');
             this.updateStats('hybrid', wordlist.length);
             this.hideProgress();
         }, 1500);
@@ -1106,11 +1209,38 @@ user"></textarea>
         
         setTimeout(() => {
             const apiType = document.getElementById('apiType')?.value || 'rest';
-            const version = document.getElementById('apiVersion')?.value || 'v1';
+            const versions = document.getElementById('apiVersion')?.value.split(',').map(v => v.trim()) || ['v1'];
+            const includeAuth = document.getElementById('apiAuth')?.checked || false;
+            const includeUsers = document.getElementById('apiUsers')?.checked || false;
+            const includeAdmin = document.getElementById('apiAdmin')?.checked || false;
+            const includeFiles = document.getElementById('apiFiles')?.checked || false;
+            const includeData = document.getElementById('apiData')?.checked || false;
             
-            let wordlist = this.getApiEndpoints(apiType, version);
+            let wordlist = [];
             
-            this.displayWordlist(wordlist, 'API Endpoints');
+            versions.forEach(version => {
+                if (includeAuth) {
+                    wordlist.push(...this.getAuthEndpoints(apiType, version));
+                }
+                if (includeUsers) {
+                    wordlist.push(...this.getUserEndpoints(apiType, version));
+                }
+                if (includeAdmin) {
+                    wordlist.push(...this.getAdminEndpoints(apiType, version));
+                }
+                if (includeFiles) {
+                    wordlist.push(...this.getFileEndpoints(apiType, version));
+                }
+                if (includeData) {
+                    wordlist.push(...this.getDataEndpoints(apiType, version));
+                }
+            });
+            
+            if (apiType === 'graphql') {
+                wordlist.push('/graphql', '/graphiql', '/graphql/playground', '/graphql/voyager');
+            }
+            
+            this.displayWordlist([...new Set(wordlist)], 'API Endpoints');
             this.updateStats('endpoints', wordlist.length);
             this.hideProgress();
         }, 1000);
@@ -1131,8 +1261,17 @@ user"></textarea>
             if (document.getElementById('techJoomla')?.checked) {
                 wordlist.push(...this.getJoomlaPaths());
             }
+            if (document.getElementById('techLaravel')?.checked) {
+                wordlist.push(...this.getLaravelPaths());
+            }
+            if (document.getElementById('techSymfony')?.checked) {
+                wordlist.push(...this.getSymfonyPaths());
+            }
+            if (document.getElementById('techSpring')?.checked) {
+                wordlist.push(...this.getSpringPaths());
+            }
             
-            this.displayWordlist(wordlist, 'Web Technology Paths');
+            this.displayWordlist([...new Set(wordlist)], 'Web Technology Paths');
             this.updateStats('webtech', wordlist.length);
             this.hideProgress();
         }, 1500);
@@ -1153,84 +1292,216 @@ user"></textarea>
             if (document.getElementById('secLFI')?.checked) {
                 wordlist.push(...this.getLFIPayloads());
             }
+            if (document.getElementById('secCMDi')?.checked) {
+                wordlist.push(...this.getCMDiPayloads());
+            }
+            if (document.getElementById('secFuzz')?.checked) {
+                wordlist.push(...this.getFuzzPayloads());
+            }
+            if (document.getElementById('secBypass')?.checked) {
+                wordlist.push(...this.getBypassPayloads());
+            }
             
-            this.displayWordlist(wordlist, 'Security Test Payloads');
-            this.updateStats('security', wordlist.length);
+            // Apply encoding if requested
+            let encodedWordlist = [...wordlist];
+            if (document.getElementById('encURL')?.checked) {
+                encodedWordlist.push(...wordlist.map(payload => encodeURIComponent(payload)));
+            }
+            if (document.getElementById('encHTML')?.checked) {
+                encodedWordlist.push(...wordlist.map(payload => 
+                    payload.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
+                ));
+            }
+            if (document.getElementById('encUnicode')?.checked) {
+                encodedWordlist.push(...wordlist.map(payload => 
+                    payload.split('').map(char => '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0')).join('')
+                ));
+            }
+            
+            this.displayWordlist([...new Set(encodedWordlist)], 'Security Test Payloads');
+            this.updateStats('security', encodedWordlist.length);
             this.hideProgress();
         }, 2000);
     }
 
-    // Data sources
+    // Data source methods
     getDirectoryWords(tech) {
-        return ['admin', 'backup', 'config', 'uploads', 'images', 'scripts', 'styles', 'data', 'files', 'docs', 'downloads', 'temp', 'cache', 'logs', 'debug', 'test', 'dev', 'api', 'assets', 'media'];
+        const base = ['admin', 'backup', 'config', 'uploads', 'images', 'scripts', 'styles', 'data', 'files', 'docs', 'downloads', 'temp', 'cache', 'logs', 'debug', 'test', 'dev', 'api', 'assets', 'media', 'content', 'static', 'public', 'private', 'secure', 'hidden'];
+        
+        const techSpecific = {
+            php: ['includes', 'lib', 'vendor', 'composer'],
+            asp: ['bin', 'App_Data', 'App_Code', 'App_GlobalResources'],
+            java: ['WEB-INF', 'META-INF', 'classes', 'lib'],
+            python: ['static', 'templates', 'migrations', '__pycache__'],
+            nodejs: ['node_modules', 'public', 'views', 'routes']
+        };
+        
+        return [...base, ...(techSpecific[tech] || [])];
     }
 
     getFileWords(tech) {
-        const base = ['index', 'admin', 'login', 'config', 'main', 'app', 'test', 'info', 'status', 'health'];
+        const base = ['index', 'admin', 'login', 'config', 'main', 'app', 'test', 'info', 'status', 'health', 'robots.txt', 'sitemap.xml', '.htaccess'];
+        
         const techSpecific = {
-            php: ['index.php', 'config.php', 'admin.php', 'login.php', 'info.php'],
-            asp: ['default.aspx', 'web.config', 'admin.aspx', 'login.aspx'],
-            java: ['index.jsp', 'admin.jsp', 'web.xml', 'struts.xml'],
-            python: ['app.py', 'main.py', 'config.py', 'settings.py', 'manage.py'],
-            nodejs: ['package.json', 'server.js', 'app.js', 'index.js', 'gulpfile.js']
+            php: ['index.php', 'config.php', 'admin.php', 'login.php', 'info.php', 'phpinfo.php', 'wp-config.php'],
+            asp: ['default.aspx', 'web.config', 'admin.aspx', 'login.aspx', 'global.asax'],
+            java: ['index.jsp', 'admin.jsp', 'web.xml', 'struts.xml', 'applicationContext.xml'],
+            python: ['app.py', 'main.py', 'config.py', 'settings.py', 'manage.py', 'wsgi.py', 'requirements.txt'],
+            nodejs: ['package.json', 'server.js', 'app.js', 'index.js', 'gulpfile.js', 'webpack.config.js']
         };
+        
         return [...base, ...(techSpecific[tech] || [])];
     }
 
     getBackupWords() {
-        return ['backup', 'bak', 'old', 'orig', 'copy', 'save', 'backup.zip', 'backup.tar.gz', 'backup.sql', 'dump.sql', 'backup.bak'];
+        return ['backup', 'bak', 'old', 'orig', 'copy', 'save', 'tmp', 'temp', 'backup.zip', 'backup.tar.gz', 'backup.sql', 'dump.sql', 'backup.bak', 'site_backup.zip', 'db_backup.sql'];
     }
 
     getConfigWords(tech) {
-        const base = ['config', 'configuration', 'settings', 'options', 'preferences'];
+        const base = ['config', 'configuration', 'settings', 'options', 'preferences', '.env', 'environment'];
+        
         const techSpecific = {
-            php: ['wp-config.php', 'config.inc.php', 'configuration.php'],
-            asp: ['web.config', 'app.config', 'machine.config'],
-            java: ['application.properties', 'config.properties', 'hibernate.cfg.xml'],
-            python: ['settings.py', 'config.py', 'local_settings.py'],
-            nodejs: ['config.json', '.env', 'package.json']
+            php: ['wp-config.php', 'config.inc.php', 'configuration.php', 'config.ini'],
+            asp: ['web.config', 'app.config', 'machine.config', 'appsettings.json'],
+            java: ['application.properties', 'config.properties', 'hibernate.cfg.xml', 'spring.xml'],
+            python: ['settings.py', 'config.py', 'local_settings.py', 'production.py', 'development.py'],
+            nodejs: ['config.json', '.env', 'package.json', '.npmrc', 'ecosystem.config.js']
         };
+        
         return [...base, ...(techSpecific[tech] || [])];
     }
 
-    getEnumerationWords(tech) {
-        return [...this.getDirectoryWords(tech), ...this.getFileWords(tech), ...this.getBackupWords(), ...this.getConfigWords(tech)];
-    }
-
     getDefaultCredentials() {
-        return [
-            { username: 'admin', password: 'admin' },
-            { username: 'admin', password: 'password' },
-            { username: 'admin', password: '123456' },
-            { username: 'root', password: 'root' },
-            { username: 'user', password: 'user' },
-            { username: 'test', password: 'test' },
-            { username: 'guest', password: 'guest' },
-            { username: 'administrator', password: 'administrator' },
-            { username: 'admin', password: '' },
-            { username: 'root', password: 'toor' }
-        ];
+        return {
+            generic: [
+                { username: 'admin', password: 'admin' },
+                { username: 'admin', password: 'password' },
+                { username: 'admin', password: '123456' },
+                { username: 'root', password: 'root' },
+                { username: 'user', password: 'user' },
+                { username: 'test', password: 'test' },
+                { username: 'guest', password: 'guest' },
+                { username: 'administrator', password: 'administrator' },
+                { username: 'admin', password: '' },
+                { username: 'root', password: 'toor' }
+            ],
+            routers: [
+                { username: 'admin', password: 'admin' },
+                { username: 'admin', password: 'password' },
+                { username: 'admin', password: '' },
+                { username: 'root', password: 'root' },
+                { username: 'cisco', password: 'cisco' },
+                { username: 'netgear', password: 'password' },
+                { username: 'linksys', password: 'admin' }
+            ],
+            databases: [
+                { username: 'root', password: '' },
+                { username: 'root', password: 'root' },
+                { username: 'mysql', password: 'mysql' },
+                { username: 'postgres', password: 'postgres' },
+                { username: 'sa', password: 'sa' },
+                { username: 'oracle', password: 'oracle' },
+                { username: 'admin', password: 'admin' }
+            ],
+            apps: [
+                { username: 'admin', password: 'admin' },
+                { username: 'admin', password: 'password' },
+                { username: 'administrator', password: 'password' },
+                { username: 'demo', password: 'demo' },
+                { username: 'test', password: 'test' },
+                { username: 'guest', password: 'guest' }
+            ],
+            iot: [
+                { username: 'admin', password: 'admin' },
+                { username: 'admin', password: '' },
+                { username: 'root', password: 'root' },
+                { username: 'pi', password: 'raspberry' },
+                { username: 'ubuntu', password: 'ubuntu' },
+                { username: 'user', password: 'user' }
+            ],
+            cameras: [
+                { username: 'admin', password: 'admin' },
+                { username: 'admin', password: '' },
+                { username: 'admin', password: '123456' },
+                { username: 'root', password: 'root' },
+                { username: 'viewer', password: 'viewer' },
+                { username: 'camera', password: 'camera' }
+            ]
+        };
     }
 
-    getApiEndpoints(type, version) {
+    getAuthEndpoints(apiType, version) {
         const base = [
             `/api/${version}/auth/login`,
             `/api/${version}/auth/logout`,
             `/api/${version}/auth/register`,
-            `/api/${version}/users`,
-            `/api/${version}/users/profile`,
-            `/api/${version}/admin/config`,
-            `/api/${version}/admin/users`,
-            `/api/${version}/files/upload`,
-            `/api/${version}/files/download`,
-            `/api/${version}/data/export`
+            `/api/${version}/auth/refresh`,
+            `/api/${version}/auth/reset`,
+            `/api/${version}/auth/verify`,
+            `/api/${version}/login`,
+            `/api/${version}/logout`,
+            `/api/${version}/register`,
+            `/api/${version}/token`
         ];
         
-        if (type === 'graphql') {
-            base.push('/graphql', '/graphiql', '/graphql/playground');
+        if (apiType === 'rest') {
+            base.push(`/api/${version}/oauth/token`, `/api/${version}/oauth/authorize`);
         }
         
         return base;
+    }
+
+    getUserEndpoints(apiType, version) {
+        return [
+            `/api/${version}/users`,
+            `/api/${version}/users/profile`,
+            `/api/${version}/users/me`,
+            `/api/${version}/users/settings`,
+            `/api/${version}/user`,
+            `/api/${version}/profile`,
+            `/api/${version}/account`,
+            `/api/${version}/me`
+        ];
+    }
+
+    getAdminEndpoints(apiType, version) {
+        return [
+            `/api/${version}/admin`,
+            `/api/${version}/admin/users`,
+            `/api/${version}/admin/config`,
+            `/api/${version}/admin/settings`,
+            `/api/${version}/admin/logs`,
+            `/api/${version}/admin/stats`,
+            `/api/${version}/admin/dashboard`,
+            `/api/${version}/management`,
+            `/api/${version}/control`
+        ];
+    }
+
+    getFileEndpoints(apiType, version) {
+        return [
+            `/api/${version}/files`,
+            `/api/${version}/files/upload`,
+            `/api/${version}/files/download`,
+            `/api/${version}/upload`,
+            `/api/${version}/download`,
+            `/api/${version}/media`,
+            `/api/${version}/attachments`,
+            `/api/${version}/documents`
+        ];
+    }
+
+    getDataEndpoints(apiType, version) {
+        return [
+            `/api/${version}/data`,
+            `/api/${version}/data/export`,
+            `/api/${version}/data/import`,
+            `/api/${version}/export`,
+            `/api/${version}/import`,
+            `/api/${version}/backup`,
+            `/api/${version}/restore`,
+            `/api/${version}/sync`
+        ];
     }
 
     getWordPressPaths() {
@@ -1242,7 +1513,14 @@ user"></textarea>
             '/wp-login.php',
             '/wp-admin/admin-ajax.php',
             '/xmlrpc.php',
-            '/readme.html'
+            '/readme.html',
+            '/wp-content/uploads/',
+            '/wp-content/themes/',
+            '/wp-content/plugins/',
+            '/wp-admin/install.php',
+            '/wp-admin/upgrade.php',
+            '/wp-trackback.php',
+            '/wp-comments-post.php'
         ];
     }
 
@@ -1250,11 +1528,19 @@ user"></textarea>
         return [
             '/admin/',
             '/user/login',
+            '/user/register',
             '/sites/default/',
+            '/sites/all/',
             '/modules/',
             '/themes/',
+            '/core/',
             '/CHANGELOG.txt',
-            '/INSTALL.txt'
+            '/INSTALL.txt',
+            '/LICENSE.txt',
+            '/README.txt',
+            '/cron.php',
+            '/update.php',
+            '/install.php'
         ];
     }
 
@@ -1263,9 +1549,65 @@ user"></textarea>
             '/administrator/',
             '/components/',
             '/modules/',
+            '/plugins/',
             '/templates/',
+            '/libraries/',
             '/configuration.php',
-            '/index.php'
+            '/index.php',
+            '/htaccess.txt',
+            '/web.config.txt',
+            '/LICENSE.txt',
+            '/README.txt'
+        ];
+    }
+
+    getLaravelPaths() {
+        return [
+            '/storage/',
+            '/bootstrap/',
+            '/vendor/',
+            '/config/',
+            '/database/',
+            '/public/',
+            '/resources/',
+            '/routes/',
+            '/app/',
+            '/.env',
+            '/artisan',
+            '/composer.json',
+            '/composer.lock',
+            '/package.json'
+        ];
+    }
+
+    getSymfonyPaths() {
+        return [
+            '/config/',
+            '/public/',
+            '/src/',
+            '/templates/',
+            '/var/',
+            '/vendor/',
+            '/bin/',
+            '/.env',
+            '/composer.json',
+            '/composer.lock',
+            '/symfony.lock'
+        ];
+    }
+
+    getSpringPaths() {
+        return [
+            '/WEB-INF/',
+            '/META-INF/',
+            '/classes/',
+            '/lib/',
+            '/static/',
+            '/templates/',
+            '/application.properties',
+            '/application.yml',
+            '/pom.xml',
+            '/build.gradle'
         ];
     }
 
@@ -1275,7 +1617,12 @@ user"></textarea>
             '<img src=x onerror=alert("XSS")>',
             '<svg onload=alert("XSS")>',
             'javascript:alert("XSS")',
-            '"><script>alert("XSS")</script>'
+            '"><script>alert("XSS")</script>',
+            '\';alert("XSS");//',
+            '<iframe src="javascript:alert(\'XSS\')">',
+            '<body onload=alert("XSS")>',
+            '<div onmouseover="alert(\'XSS\')">test</div>',
+            '<script>console.log("XSS")</script>'
         ];
     }
 
@@ -1285,7 +1632,12 @@ user"></textarea>
             '" OR "1"="1',
             "'; DROP TABLE users; --",
             "' UNION SELECT NULL--",
-            "admin'--"
+            "admin'--",
+            "' OR 1=1#",
+            "' OR 'a'='a",
+            '" OR 1=1--',
+            "' UNION SELECT username, password FROM users--",
+            "1' OR '1'='1' /*"
         ];
     }
 
@@ -1294,7 +1646,58 @@ user"></textarea>
             '../../../etc/passwd',
             '../../../windows/system32/drivers/etc/hosts',
             '....//....//....//etc/passwd',
-            '%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd'
+            '%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd',
+            '..\\..\\..\\windows\\system32\\drivers\\etc\\hosts',
+            '/etc/passwd',
+            '/proc/self/environ',
+            '/var/log/apache2/access.log',
+            'C:\\windows\\system32\\drivers\\etc\\hosts'
+        ];
+    }
+
+    getCMDiPayloads() {
+        return [
+            '; cat /etc/passwd',
+            '| cat /etc/passwd',
+            '& cat /etc/passwd',
+            '&& cat /etc/passwd',
+            '|| cat /etc/passwd',
+            '`cat /etc/passwd`',
+            '$(cat /etc/passwd)',
+            '; ls -la',
+            '| whoami',
+            '& id'
+        ];
+    }
+
+    getFuzzPayloads() {
+        return [
+            'A'.repeat(100),
+            'A'.repeat(1000),
+            'A'.repeat(10000),
+            '0'.repeat(100),
+            '%s%s%s%s%s%s%s%s%s%s',
+            '%x%x%x%x%x%x%x%x%x%x',
+            '../' * 100,
+            '\\' * 100,
+            '/' * 100,
+            '%00' * 100
+        ];
+    }
+
+    getBypassPayloads() {
+        return [
+            'admin\' --',
+            'admin\' #',
+            'admin\'/*',
+            'admin\' or \'1\'=\'1\' --',
+            'admin\' or \'1\'=\'1\' #',
+            'admin\' or \'1\'=\'1\'/*',
+            '\' or 1=1 --',
+            '\' or 1=1 #',
+            '\' or 1=1/*',
+            'admin\') --',
+            'admin\') #'
         ];
     }
 
@@ -1307,20 +1710,22 @@ user"></textarea>
         const outputUnique = document.getElementById('outputUnique');
         const outputAvgLength = document.getElementById('outputAvgLength');
         
+        if (!outputPanel || !outputContent) return;
+        
         // Remove duplicates
         const uniqueWordlist = [...new Set(wordlist)];
         
         // Calculate stats
         const content = uniqueWordlist.join('\n');
         const sizeBytes = new Blob([content]).size;
-        const avgLength = uniqueWordlist.reduce((sum, word) => sum + word.length, 0) / uniqueWordlist.length;
+        const avgLength = uniqueWordlist.length > 0 ? uniqueWordlist.reduce((sum, word) => sum + word.length, 0) / uniqueWordlist.length : 0;
         
         // Update display
         outputContent.value = content;
-        outputCount.textContent = uniqueWordlist.length.toLocaleString();
-        outputSize.textContent = this.formatBytes(sizeBytes);
-        outputUnique.textContent = uniqueWordlist.length.toLocaleString();
-        outputAvgLength.textContent = avgLength.toFixed(1);
+        if (outputCount) outputCount.textContent = uniqueWordlist.length.toLocaleString();
+        if (outputSize) outputSize.textContent = this.formatBytes(sizeBytes);
+        if (outputUnique) outputUnique.textContent = uniqueWordlist.length.toLocaleString();
+        if (outputAvgLength) outputAvgLength.textContent = avgLength.toFixed(1);
         
         // Store for download
         this.currentWordlist = {
@@ -1341,6 +1746,8 @@ user"></textarea>
         const text = document.getElementById('progressText');
         const fill = document.getElementById('progressFill');
         
+        if (!indicator || !text || !fill) return;
+        
         text.textContent = message;
         indicator.classList.add('active');
         
@@ -1358,33 +1765,49 @@ user"></textarea>
         const indicator = document.getElementById('progressIndicator');
         const fill = document.getElementById('progressFill');
         
+        if (!indicator || !fill) return;
+        
         fill.style.width = '100%';
         setTimeout(() => {
             indicator.classList.remove('active');
             fill.style.width = '0%';
             if (this.progressInterval) {
                 clearInterval(this.progressInterval);
+                this.progressInterval = null;
             }
         }, 500);
     }
 
     setupOutputPanel() {
-        document.getElementById('copyOutput').addEventListener('click', () => {
-            if (this.currentWordlist) {
-                navigator.clipboard.writeText(this.currentWordlist.content);
-                this.showToast('Success', 'Wordlist copied to clipboard!', 'success');
-            }
-        });
+        const copyBtn = document.getElementById('copyOutput');
+        const downloadBtn = document.getElementById('downloadOutput');
+        const closeBtn = document.getElementById('closeOutput');
+        
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                if (this.currentWordlist) {
+                    navigator.clipboard.writeText(this.currentWordlist.content).then(() => {
+                        this.showToast('Success', 'Wordlist copied to clipboard!', 'success');
+                    }).catch(() => {
+                        this.showToast('Error', 'Failed to copy to clipboard', 'error');
+                    });
+                }
+            });
+        }
 
-        document.getElementById('downloadOutput').addEventListener('click', () => {
-            if (this.currentWordlist) {
-                this.downloadWordlist(this.currentWordlist.content, this.currentWordlist.title);
-            }
-        });
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', () => {
+                if (this.currentWordlist) {
+                    this.downloadWordlist(this.currentWordlist.content, this.currentWordlist.title);
+                }
+            });
+        }
 
-        document.getElementById('closeOutput').addEventListener('click', () => {
-            document.getElementById('outputPanel').classList.remove('active');
-        });
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                document.getElementById('outputPanel').classList.remove('active');
+            });
+        }
     }
 
     downloadWordlist(content, title) {
@@ -1407,14 +1830,19 @@ user"></textarea>
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         
+        if (!uploadArea || !fileInput) return;
+        
         uploadArea.addEventListener('click', () => fileInput.click());
+        
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
         });
+        
         uploadArea.addEventListener('dragleave', () => {
             uploadArea.classList.remove('dragover');
         });
+        
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
@@ -1443,7 +1871,7 @@ user"></textarea>
     analyzeWordlist(content, filename) {
         const lines = content.split('\n').filter(line => line.trim());
         const unique = [...new Set(lines)];
-        const avgLength = lines.reduce((sum, line) => sum + line.length, 0) / lines.length;
+        const avgLength = lines.length > 0 ? lines.reduce((sum, line) => sum + line.length, 0) / lines.length : 0;
         
         const analysis = {
             filename,
@@ -1451,8 +1879,8 @@ user"></textarea>
             uniqueLines: unique.length,
             duplicates: lines.length - unique.length,
             avgLength: avgLength.toFixed(2),
-            minLength: Math.min(...lines.map(l => l.length)),
-            maxLength: Math.max(...lines.map(l => l.length)),
+            minLength: lines.length > 0 ? Math.min(...lines.map(l => l.length)) : 0,
+            maxLength: lines.length > 0 ? Math.max(...lines.map(l => l.length)) : 0,
             size: new Blob([content]).size
         };
         
@@ -1461,6 +1889,8 @@ user"></textarea>
 
     displayAnalysis(analysis) {
         const resultsDiv = document.getElementById('analysisResults');
+        if (!resultsDiv) return;
+        
         resultsDiv.style.display = 'block';
         resultsDiv.innerHTML = `
             <div class="analysis-card">
@@ -1503,10 +1933,12 @@ user"></textarea>
         
         this.generationHistory.unshift(historyItem);
         this.updateHistoryDisplay();
+        this.saveHistory();
     }
 
     updateHistoryDisplay() {
         const historyList = document.getElementById('historyList');
+        if (!historyList) return;
         
         if (this.generationHistory.length === 0) {
             historyList.innerHTML = `
@@ -1543,16 +1975,24 @@ user"></textarea>
     }
 
     setupHistoryActions() {
-        document.getElementById('clearHistory').addEventListener('click', () => {
-            this.generationHistory = [];
-            this.updateHistoryDisplay();
-            this.showToast('Success', 'History cleared successfully!', 'success');
-        });
+        const clearBtn = document.getElementById('clearHistory');
+        const exportBtn = document.getElementById('exportHistory');
+        
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                this.generationHistory = [];
+                this.updateHistoryDisplay();
+                this.saveHistory();
+                this.showToast('Success', 'History cleared successfully!', 'success');
+            });
+        }
 
-        document.getElementById('exportHistory').addEventListener('click', () => {
-            const csv = this.generateHistoryCSV();
-            this.downloadWordlist(csv, 'generation_history');
-        });
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                const csv = this.generateHistoryCSV();
+                this.downloadWordlist(csv, 'generation_history.csv');
+            });
+        }
     }
 
     generateHistoryCSV() {
@@ -1564,21 +2004,34 @@ user"></textarea>
     }
 
     setupTools() {
-        document.getElementById('filterTool').addEventListener('click', () => {
-            this.openFilterTool();
-        });
+        const filterBtn = document.getElementById('filterTool');
+        const mergeBtn = document.getElementById('mergeTool');
+        const ruleBtn = document.getElementById('ruleTool');
+        const statsBtn = document.getElementById('statsTool');
+        
+        if (filterBtn) {
+            filterBtn.addEventListener('click', () => {
+                this.openFilterTool();
+            });
+        }
 
-        document.getElementById('mergeTool').addEventListener('click', () => {
-            this.openMergeTool();
-        });
+        if (mergeBtn) {
+            mergeBtn.addEventListener('click', () => {
+                this.openMergeTool();
+            });
+        }
 
-        document.getElementById('ruleTool').addEventListener('click', () => {
-            this.openRuleTool();
-        });
+        if (ruleBtn) {
+            ruleBtn.addEventListener('click', () => {
+                this.openRuleTool();
+            });
+        }
 
-        document.getElementById('statsTool').addEventListener('click', () => {
-            this.openStatsTool();
-        });
+        if (statsBtn) {
+            statsBtn.addEventListener('click', () => {
+                this.openStatsTool();
+            });
+        }
     }
 
     openFilterTool() {
@@ -1708,23 +2161,23 @@ user"></textarea>
     }
 
     applyFilter() {
-        const input = document.getElementById('filterInput').value;
+        const input = document.getElementById('filterInput')?.value || '';
         const lines = input.split('\n');
         let filtered = lines;
         
-        if (document.getElementById('removeEmpty').checked) {
+        if (document.getElementById('removeEmpty')?.checked) {
             filtered = filtered.filter(line => line.trim());
         }
         
-        if (document.getElementById('removeDuplicates').checked) {
+        if (document.getElementById('removeDuplicates')?.checked) {
             filtered = [...new Set(filtered)];
         }
         
-        const minLen = parseInt(document.getElementById('minLength').value) || 0;
-        const maxLen = parseInt(document.getElementById('maxLength').value) || Infinity;
+        const minLen = parseInt(document.getElementById('minLength')?.value) || 0;
+        const maxLen = parseInt(document.getElementById('maxLength')?.value) || Infinity;
         filtered = filtered.filter(line => line.length >= minLen && line.length <= maxLen);
         
-        if (document.getElementById('sortAlpha').checked) {
+        if (document.getElementById('sortAlpha')?.checked) {
             filtered.sort();
         }
         
@@ -1733,16 +2186,16 @@ user"></textarea>
     }
 
     applyMerge() {
-        const list1 = document.getElementById('mergeList1').value.split('\n').filter(l => l.trim());
-        const list2 = document.getElementById('mergeList2').value.split('\n').filter(l => l.trim());
+        const list1 = document.getElementById('mergeList1')?.value.split('\n').filter(l => l.trim()) || [];
+        const list2 = document.getElementById('mergeList2')?.value.split('\n').filter(l => l.trim()) || [];
         
         let merged = [...list1, ...list2];
         
-        if (document.getElementById('mergeRemoveDuplicates').checked) {
+        if (document.getElementById('mergeRemoveDuplicates')?.checked) {
             merged = [...new Set(merged)];
         }
         
-        if (document.getElementById('mergeSortOutput').checked) {
+        if (document.getElementById('mergeSortOutput')?.checked) {
             merged.sort();
         }
         
@@ -1751,29 +2204,36 @@ user"></textarea>
     }
 
     generateRules() {
-        const ruleType = document.getElementById('ruleType').value;
+        const ruleType = document.getElementById('ruleType')?.value || 'hashcat';
         let rules = [];
         
-        if (document.getElementById('ruleCapitalize').checked) {
+        if (document.getElementById('ruleCapitalize')?.checked) {
             rules.push(ruleType === 'hashcat' ? 'c' : ':');
         }
         
-        if (document.getElementById('ruleAppendNumbers').checked) {
+        if (document.getElementById('ruleAppendNumbers')?.checked) {
             for (let i = 0; i < 100; i++) {
                 rules.push(ruleType === 'hashcat' ? `$${i}` : `$${i}`);
             }
         }
         
-        if (document.getElementById('ruleReverse').checked) {
+        if (document.getElementById('ruleAppendSpecial')?.checked) {
+            const special = ['!', '@', '#', '$', '%', '^', '&', '*'];
+            special.forEach(char => {
+                rules.push(ruleType === 'hashcat' ? `$${char}` : `$${char}`);
+            });
+        }
+        
+        if (document.getElementById('ruleReverse')?.checked) {
             rules.push(ruleType === 'hashcat' ? 'r' : 'r');
         }
         
-        this.displayWordlist(rules, `${ruleType} Rules`);
+        this.displayWordlist(rules, `${ruleType.toUpperCase()} Rules`);
         this.closeModal();
     }
 
     analyzeStats() {
-        const input = document.getElementById('statsInput').value;
+        const input = document.getElementById('statsInput')?.value || '';
         const lines = input.split('\n').filter(l => l.trim());
         const unique = [...new Set(lines)];
         
@@ -1781,26 +2241,29 @@ user"></textarea>
             total: lines.length,
             unique: unique.length,
             duplicates: lines.length - unique.length,
-            avgLength: lines.reduce((sum, line) => sum + line.length, 0) / lines.length,
-            minLength: Math.min(...lines.map(l => l.length)),
-            maxLength: Math.max(...lines.map(l => l.length)),
+            avgLength: lines.length > 0 ? lines.reduce((sum, line) => sum + line.length, 0) / lines.length : 0,
+            minLength: lines.length > 0 ? Math.min(...lines.map(l => l.length)) : 0,
+            maxLength: lines.length > 0 ? Math.max(...lines.map(l => l.length)) : 0,
             charset: this.analyzeCharset(lines)
         };
         
-        document.getElementById('statsResults').innerHTML = `
-            <div class="stats-display">
-                <h4>Analysis Results</h4>
-                <div class="stat-grid">
-                    <div>Total Words: ${stats.total.toLocaleString()}</div>
-                    <div>Unique Words: ${stats.unique.toLocaleString()}</div>
-                    <div>Duplicates: ${stats.duplicates.toLocaleString()}</div>
-                    <div>Average Length: ${stats.avgLength.toFixed(2)}</div>
-                    <div>Min Length: ${stats.minLength}</div>
-                    <div>Max Length: ${stats.maxLength}</div>
-                    <div>Character Set: ${stats.charset}</div>
+        const resultsDiv = document.getElementById('statsResults');
+        if (resultsDiv) {
+            resultsDiv.innerHTML = `
+                <div class="stats-display">
+                    <h4>Analysis Results</h4>
+                    <div class="stat-grid">
+                        <div>Total Words: ${stats.total.toLocaleString()}</div>
+                        <div>Unique Words: ${stats.unique.toLocaleString()}</div>
+                        <div>Duplicates: ${stats.duplicates.toLocaleString()}</div>
+                        <div>Average Length: ${stats.avgLength.toFixed(2)}</div>
+                        <div>Min Length: ${stats.minLength}</div>
+                        <div>Max Length: ${stats.maxLength}</div>
+                        <div>Character Set: ${stats.charset}</div>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
     }
 
     analyzeCharset(lines) {
@@ -1819,15 +2282,15 @@ user"></textarea>
     }
 
     handleFabAction(action) {
-        document.getElementById('fab').classList.remove('active');
-        document.getElementById('fabMenu').classList.remove('active');
+        document.getElementById('fab')?.classList.remove('active');
+        document.getElementById('fabMenu')?.classList.remove('active');
         
         switch (action) {
             case 'quick-generate':
                 this.openQuickGenerate();
                 break;
             case 'import':
-                document.getElementById('fileInput').click();
+                document.getElementById('fileInput')?.click();
                 break;
             case 'help':
                 this.openHelp();
@@ -1863,10 +2326,10 @@ user"></textarea>
 
     quickGenerate(type) {
         const wordlists = {
-            'common-passwords': ['123456', 'password', 'admin', 'letmein', 'welcome', 'monkey', 'dragon', 'abc123', 'mustang', 'password1'],
-            'common-usernames': ['admin', 'administrator', 'user', 'guest', 'test', 'demo', 'root', 'sa', 'oracle', 'postgres'],
-            'web-dirs': ['admin', 'backup', 'config', 'data', 'files', 'images', 'includes', 'scripts', 'styles', 'uploads'],
-            'file-extensions': ['php', 'html', 'htm', 'asp', 'aspx', 'jsp', 'js', 'css', 'txt', 'xml', 'json', 'sql', 'bak', 'old']
+            'common-passwords': ['123456', 'password', 'admin', 'letmein', 'welcome', 'monkey', 'dragon', 'abc123', 'mustang', 'password1', 'qwerty', 'football', 'iloveyou', 'admin123', 'welcome123', 'login', 'master', 'hello', 'freedom', 'whatever'],
+            'common-usernames': ['admin', 'administrator', 'user', 'guest', 'test', 'demo', 'root', 'sa', 'oracle', 'postgres', 'mysql', 'ftp', 'mail', 'email', 'web', 'www', 'http', 'ssh', 'support', 'service'],
+            'web-dirs': ['admin', 'backup', 'config', 'data', 'files', 'images', 'includes', 'scripts', 'styles', 'uploads', 'downloads', 'documents', 'media', 'assets', 'content', 'public', 'private', 'secure', 'hidden', 'temp'],
+            'file-extensions': ['php', 'html', 'htm', 'asp', 'aspx', 'jsp', 'js', 'css', 'txt', 'xml', 'json', 'sql', 'bak', 'old', 'log', 'conf', 'config', 'inc', 'class', 'java']
         };
         
         this.displayWordlist(wordlists[type], `Quick Generate: ${type}`);
@@ -1910,6 +2373,8 @@ user"></textarea>
         const modal = document.getElementById('modal');
         const overlay = document.getElementById('modalOverlay');
         
+        if (!modal || !overlay) return;
+        
         modal.innerHTML = `
             <div class="modal-header">
                 <h3>${title}</h3>
@@ -1926,11 +2391,16 @@ user"></textarea>
     }
 
     closeModal() {
-        document.getElementById('modalOverlay').classList.remove('active');
+        const overlay = document.getElementById('modalOverlay');
+        if (overlay) {
+            overlay.classList.remove('active');
+        }
     }
 
     showToast(title, message, type = 'info') {
         const container = document.getElementById('toastContainer');
+        if (!container) return;
+        
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         
@@ -1971,14 +2441,21 @@ user"></textarea>
     }
 
     updateStatsDisplay() {
-        document.getElementById('totalGenerated').textContent = this.stats.totalGenerated.toLocaleString();
-        document.getElementById('activeSessions').textContent = this.stats.activeSessions;
-        document.getElementById('totalDownloads').textContent = this.stats.totalDownloads.toLocaleString();
-        document.getElementById('mostUsed').textContent = this.stats.mostUsed;
+        const totalGenerated = document.getElementById('totalGenerated');
+        const activeSessions = document.getElementById('activeSessions');
+        const totalDownloads = document.getElementById('totalDownloads');
+        const mostUsed = document.getElementById('mostUsed');
+        
+        if (totalGenerated) totalGenerated.textContent = this.stats.totalGenerated.toLocaleString();
+        if (activeSessions) activeSessions.textContent = this.stats.activeSessions;
+        if (totalDownloads) totalDownloads.textContent = this.stats.totalDownloads.toLocaleString();
+        if (mostUsed) mostUsed.textContent = this.stats.mostUsed;
     }
 
     addActivity(message) {
         const activityList = document.getElementById('activityList');
+        if (!activityList) return;
+        
         const activity = document.createElement('div');
         activity.className = 'activity-item';
         activity.innerHTML = `
@@ -1999,10 +2476,19 @@ user"></textarea>
         localStorage.setItem('wordlist_arsenal_stats', JSON.stringify(this.stats));
     }
 
+    saveHistory() {
+        localStorage.setItem('wordlist_arsenal_history', JSON.stringify(this.generationHistory));
+    }
+
     loadStats() {
         const saved = localStorage.getItem('wordlist_arsenal_stats');
         if (saved) {
             this.stats = { ...this.stats, ...JSON.parse(saved) };
+        }
+        
+        const savedHistory = localStorage.getItem('wordlist_arsenal_history');
+        if (savedHistory) {
+            this.generationHistory = JSON.parse(savedHistory);
         }
     }
 
@@ -2026,116 +2512,12 @@ user"></textarea>
     deleteHistoryItem(id) {
         this.generationHistory = this.generationHistory.filter(h => h.id !== id);
         this.updateHistoryDisplay();
+        this.saveHistory();
         this.showToast('Success', 'History item deleted', 'success');
     }
 }
 
-// Initialize the application
-const wordlistArsenal = new WordlistArsenal();
-
-// Add some helpful CSS for the tools
-const additionalCSS = `
-.quick-options {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-top: 1rem;
-}
-
-.quick-options .btn-primary {
-    padding: 1rem;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.tool-content .modal-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-    margin-top: 2rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--bg-tertiary);
-}
-
-.analysis-card {
-    background: var(--bg-secondary);
-    border: 1px solid var(--bg-tertiary);
-    border-radius: var(--radius-lg);
-    padding: var(--spacing-lg);
-    margin-bottom: var(--spacing-lg);
-}
-
-.analysis-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: var(--spacing-md);
-    margin-top: var(--spacing-md);
-}
-
-.analysis-stats .stat {
-    display: flex;
-    justify-content: space-between;
-    padding: var(--spacing-sm);
-    background: var(--bg-primary);
-    border-radius: var(--radius-md);
-}
-
-.stats-display {
-    background: var(--bg-secondary);
-    border: 1px solid var(--bg-tertiary);
-    border-radius: var(--radius-lg);
-    padding: var(--spacing-lg);
-}
-
-.stat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: var(--spacing-sm);
-    margin-top: var(--spacing-md);
-}
-
-.stat-grid > div {
-    padding: var(--spacing-sm);
-    background: var(--bg-primary);
-    border-radius: var(--radius-md);
-    font-size: 0.875rem;
-}
-
-.help-section {
-    margin-bottom: var(--spacing-lg);
-    padding-bottom: var(--spacing-lg);
-    border-bottom: 1px solid var(--bg-tertiary);
-}
-
-.help-section:last-child {
-    border-bottom: none;
-}
-
-.help-section h5 {
-    color: var(--accent-purple);
-    margin-bottom: var(--spacing-sm);
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--spacing-lg);
-    padding-bottom: var(--spacing-lg);
-    border-bottom: 1px solid var(--bg-tertiary);
-}
-
-.modal-header h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-}
-`;
-
-// Inject additional CSS
-const styleSheet = document.createElement('style');
-styleSheet.textContent = additionalCSS;
-document.head.appendChild(styleSheet);
+// Initialize the application when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.wordlistArsenal = new WordlistArsenal();
+});
