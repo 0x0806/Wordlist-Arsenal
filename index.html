@@ -5,32 +5,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wordlist Arsenal - Advanced Cybersecurity Tool</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="style.css" rel="stylesheet">
 </head>
 <body>
     <div class="app-container">
-        <!-- Header -->
+        <!-- Header / status bar -->
         <header class="header">
             <div class="header-content">
                 <div class="logo">
-                    <i class="fas fa-shield-alt"></i>
-                    <span>Wordlist Arsenal</span>
-                    <div class="version">by 0x0806</div>
+                    <span class="logo-mark">[&nbsp;Wordlist Arsenal&nbsp;]</span>
+                    <span class="version">0x0806</span>
                 </div>
                 <div class="header-stats">
                     <div class="stat-item">
-                        <span class="stat-label">Generated</span>
+                        <span class="stat-label">generated</span>
                         <span class="stat-value" id="totalGenerated">0</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Sessions</span>
+                        <span class="stat-label">sessions</span>
                         <span class="stat-value" id="totalSessions">1</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Downloads</span>
+                        <span class="stat-label">downloads</span>
                         <span class="stat-value" id="totalDownloads">0</span>
+                    </div>
+                    <div class="stat-item stat-item-live">
+                        <span class="live-dot" aria-hidden="true"></span>
+                        <span class="stat-label">client-side only</span>
                     </div>
                 </div>
             </div>
@@ -87,52 +92,46 @@
             <div class="main-panel">
                 <!-- Ultimate Wordlist Banner -->
                 <div class="ultimate-banner">
-                    <div class="ultimate-banner-text">
-                        <h3><i class="fas fa-fire"></i> Generate the Ultimate Wordlist</h3>
-                        <p>Combines every generator in this app &mdash; enumeration, secrets, cloud buckets, parameters, default credentials, usernames, hybrid mutations, API &amp; web framework paths, and every security payload category &mdash; into one massive, deduplicated wordlist.</p>
+                    <div class="ultimate-prompt">
+                        <span class="ultimate-prompt-path">arsenal</span><span class="ultimate-prompt-sigil">$</span>
+                        <span class="ultimate-prompt-cmd">combine --all-generators --dedupe</span>
                     </div>
+                    <p class="ultimate-banner-text">Every recon path, secret, bucket name, credential, username, mutation and payload in this build, merged into one list.</p>
                     <button class="ultimate-btn" id="ultimateBtn" onclick="generateUltimateWordlist()">
-                        <i class="fas fa-bolt"></i> Generate Ultimate Wordlist
+                        run<span class="ultimate-btn-arrow">&nbsp;&#9656;</span>
                     </button>
                 </div>
 
+                <div class="generator-tabs-wrap">
                 <div class="generator-tabs">
                     <button class="tab-btn active" data-tab="enumeration">
-                        <i class="fas fa-search"></i>
-                        Enumeration
+                        <span class="tab-code">ENM</span>Enumeration
                     </button>
                     <button class="tab-btn" data-tab="bruteforce">
-                        <i class="fas fa-hammer"></i>
-                        Brute Force
+                        <span class="tab-code">BRF</span>Brute Force
                     </button>
                     <button class="tab-btn" data-tab="credentials">
-                        <i class="fas fa-id-card"></i>
-                        Credentials
+                        <span class="tab-code">CRD</span>Credentials
                     </button>
                     <button class="tab-btn" data-tab="usernames">
-                        <i class="fas fa-users"></i>
-                        Usernames
+                        <span class="tab-code">USR</span>Usernames
                     </button>
                     <button class="tab-btn" data-tab="patterns">
-                        <i class="fas fa-code"></i>
-                        Patterns
+                        <span class="tab-code">PAT</span>Patterns
                     </button>
                     <button class="tab-btn" data-tab="hybrid">
-                        <i class="fas fa-random"></i>
-                        Hybrid
+                        <span class="tab-code">HYB</span>Hybrid
                     </button>
                     <button class="tab-btn" data-tab="api">
-                        <i class="fas fa-plug"></i>
-                        API Endpoints
+                        <span class="tab-code">API</span>Endpoints
                     </button>
                     <button class="tab-btn" data-tab="webtech">
-                        <i class="fas fa-code-branch"></i>
-                        Web Tech
+                        <span class="tab-code">TEC</span>Web Tech
                     </button>
                     <button class="tab-btn" data-tab="security">
-                        <i class="fas fa-bug"></i>
-                        Security Testing
+                        <span class="tab-code">SEC</span>Security
                     </button>
+                </div>
                 </div>
 
                 <div class="generator-content">
@@ -585,7 +584,7 @@
                             <div class="config-section">
                                 <h3>Testing Scope</h3>
                                 <label class="checkbox-label">
-                                    <input type="checkbox" id="sec-basic">
+                                    <input type="checkbox" checked id="sec-basic">
                                     <span>Basic Payloads</span>
                                 </label>
                                 <label class="checkbox-label">
@@ -693,15 +692,15 @@
                 </div>
                 <div class="modal-body">
                     <div class="help-section">
-                        <h3>⚠️ Ethical Use Disclaimer</h3>
+                        <h3>Ethical use disclaimer</h3>
                         <p>This tool is designed for authorized security testing and educational purposes only. Users are responsible for ensuring they have proper authorization before testing any systems. Unauthorized access to computer systems is illegal and unethical.</p>
                     </div>
                     <div class="help-section">
-                        <h3>🔥 Ultimate Wordlist</h3>
+                        <h3>Ultimate wordlist</h3>
                         <p>The banner above the generator tabs has a one-click button that runs every generator at once (recon paths, secrets, cloud buckets, parameters, credentials, usernames, hybrid mutations, API/web-framework paths, and every security payload type) and merges the results into one deduplicated list.</p>
                     </div>
                     <div class="help-section">
-                        <h3>🛡️ Generator Types</h3>
+                        <h3>Generator types</h3>
                         <ul>
                             <li><strong>Enumeration:</strong> Web directory/file discovery, secrets &amp; tokens, cloud storage buckets, parameter names</li>
                             <li><strong>Brute Force:</strong> Password attack wordlists</li>
@@ -715,7 +714,7 @@
                         </ul>
                     </div>
                     <div class="help-section">
-                        <h3>📋 Usage Tips</h3>
+                        <h3>Usage tips</h3>
                         <ul>
                             <li>Use Quick Actions or the Ultimate Wordlist button for instant coverage</li>
                             <li>Use "Select All / Select None" in each panel to quickly toggle every option</li>

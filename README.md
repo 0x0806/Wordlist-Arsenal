@@ -5,11 +5,11 @@ A comprehensive web-based wordlist generation platform designed for cybersecurit
 
 ## Overview
 
-Wordlist Arsenal is an advanced cybersecurity tool that provides nine specialized wordlist generators for various security testing scenarios, plus a one-click **Ultimate Wordlist** mode that combines every generator into a single deduplicated list. The application features a responsive dark-themed interface with real-time generation capabilities, comprehensive file analysis, and intelligent mutation algorithms.
+Wordlist Arsenal is an advanced cybersecurity tool that provides nine specialized wordlist generators for various security testing scenarios, plus a one-click **Ultimate Wordlist** mode that combines every generator into a single deduplicated list. The interface is built around an "ops console" visual language — flat hairline-bordered panels, a single amber signal color, and monospace typography for anything that is actual data (output, counts, filenames) — aimed at the people who'll actually use it daily from a terminal-heavy workflow.
 
 ## Features
 
-### 🔥 Ultimate Wordlist Mode
+### Ultimate Wordlist Mode
 One button combines **every** generator and data source in the app — recon paths, secrets/tokens, cloud storage bucket names, parameter names, default credentials, common usernames, hybrid password mutations, API/web-framework paths, and all ten security payload categories — into a single deduplicated wordlist, ready to copy, sort, filter, or export.
 
 ### Core Generators
@@ -40,7 +40,8 @@ One button combines **every** generator and data source in the app — recon pat
 
 ### Frontend
 - **Language**: Vanilla JavaScript (ES6+)
-- **Styling**: Advanced CSS with custom properties
+- **Styling**: CSS custom-property design system (`style.css` `:root` tokens: `--ink`, `--panel`, `--line`, `--paper`, `--mute`, `--signal`, `--brass`, `--danger`) — no build step, no framework
+- **Typography**: Space Grotesk (UI/headings) + IBM Plex Mono (all data: results, stats, filenames, code placeholders)
 - **UI Framework**: Native CSS Grid and Flexbox
 - **Compatibility**: Modern browsers with ES6+ support
 
@@ -238,7 +239,16 @@ These are not yet implemented, in rough priority order:
 
 ## Version History
 
-### Current Version: 1.2.0
+### Current Version: 1.3.0
+Full visual redesign. The previous UI used a generic dark-glassmorphism SaaS look (blurred glass cards, rainbow gradient buttons, soft drop shadows) that didn't say anything about what the tool actually does. It's replaced with an "ops console" design grounded in how the audience actually works:
+- New design system: flat hairline-bordered panels (no blur, no card shadows), one deliberate accent color (ordnance-amber) instead of rainbow gradients, Space Grotesk for UI text and IBM Plex Mono for every piece of actual data (results, stats, history, placeholders)
+- Header redesigned as a status bar; the Ultimate Wordlist banner redesigned as a command-line invocation (`arsenal$ combine --all-generators --dedupe`)
+- Generator tabs now carry short module codes (`ENM`, `BRF`, `CRD`, …) instead of a generic icon, with a scroll-fade hint so overflowed tabs are discoverable
+- Fixed a mobile layout bug introduced mid-redesign: flex panels that scroll internally on desktop were collapsing to zero height on narrow screens because they had no bounding viewport height; small screens now scroll as a normal stacked page instead
+- Fixed a pre-existing dead-end: Security Testing had "SQL Injection" checked by default but no payload-scope checkbox checked, so the default click produced 0 results — "Basic Payloads" is now checked by default
+- Verified with Playwright screenshots at desktop and mobile widths, plus the full jsdom functional suite, before shipping
+
+### Version 1.2.0
 - Added **Ultimate Wordlist** mode: one button generates a combined, deduplicated wordlist from every generator and data source in the app
 - Added NoSQL Injection, SSTI, and Open Redirect payload categories to Security Testing (10 categories total)
 - Added Secrets & Tokens, Cloud Storage Buckets, and Parameter Names recon wordlists to Web Discovery Enumeration

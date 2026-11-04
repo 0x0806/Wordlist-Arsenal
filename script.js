@@ -25,7 +25,7 @@ function initializeApp() {
     localStorage.setItem('totalSessions', appStats.totalSessions);
     
     // Show welcome toast
-    showToast('Welcome to Wordlist Arsenal! 🛡️', 'success');
+    showToast('Welcome to Wordlist Arsenal', 'success');
     
     // Initialize drag and drop
     initializeDragDrop();
@@ -307,7 +307,7 @@ function generateUltimateWordlist() {
             ...getOpenRedirectPayloads(allOn)
         );
 
-        displayResults(wordlist, '🔥 ULTIMATE Combined Wordlist');
+        displayResults(wordlist, 'ULTIMATE Combined Wordlist');
 
         if (btn) {
             btn.disabled = false;
