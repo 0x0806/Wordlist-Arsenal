@@ -73,7 +73,7 @@
                 <div class="history">
                     <div class="history-header">
                         <h3>Generation History</h3>
-                        <button class="history-clear-btn" onclick="clearHistory()" title="Clear history">
+                        <button class="history-clear-btn" onclick="clearHistory()" title="Clear history" aria-label="Clear generation history">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -85,6 +85,17 @@
 
             <!-- Main Panel -->
             <div class="main-panel">
+                <!-- Ultimate Wordlist Banner -->
+                <div class="ultimate-banner">
+                    <div class="ultimate-banner-text">
+                        <h3><i class="fas fa-fire"></i> Generate the Ultimate Wordlist</h3>
+                        <p>Combines every generator in this app &mdash; enumeration, secrets, cloud buckets, parameters, default credentials, usernames, hybrid mutations, API &amp; web framework paths, and every security payload category &mdash; into one massive, deduplicated wordlist.</p>
+                    </div>
+                    <button class="ultimate-btn" id="ultimateBtn" onclick="generateUltimateWordlist()">
+                        <i class="fas fa-bolt"></i> Generate Ultimate Wordlist
+                    </button>
+                </div>
+
                 <div class="generator-tabs">
                     <button class="tab-btn active" data-tab="enumeration">
                         <i class="fas fa-search"></i>
@@ -146,6 +157,21 @@
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="enum-config">
                                     <span>Config Files</span>
+                                </label>
+                            </div>
+                            <div class="config-section">
+                                <h3>Additional Recon</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enum-secrets">
+                                    <span>Secrets &amp; Tokens</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enum-cloud">
+                                    <span>Cloud Storage Buckets</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enum-params">
+                                    <span>Parameter Names</span>
                                 </label>
                             </div>
                             <div class="config-section">
@@ -543,6 +569,18 @@
                                     <input type="checkbox" id="sec-ssrf">
                                     <span>SSRF Payloads</span>
                                 </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sec-nosqli">
+                                    <span>NoSQL Injection</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sec-ssti">
+                                    <span>SSTI (Template Injection)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sec-openredirect">
+                                    <span>Open Redirect</span>
+                                </label>
                             </div>
                             <div class="config-section">
                                 <h3>Testing Scope</h3>
@@ -614,6 +652,19 @@
                         <span class="stat-value" id="avgLength">0</span>
                     </div>
                 </div>
+                <div class="results-toolbar">
+                    <input type="text" id="resultsFilter" placeholder="Filter results by text..." class="config-input results-filter-input">
+                    <button class="action-btn" id="applyFilterBtn" title="Permanently keep only matching lines">
+                        <i class="fas fa-filter"></i> Keep Matching
+                    </button>
+                    <select id="resultsSort" class="config-input results-sort-select" title="Sort results">
+                        <option value="none">Original Order</option>
+                        <option value="az">A &rarr; Z</option>
+                        <option value="za">Z &rarr; A</option>
+                        <option value="len-asc">Length &uarr;</option>
+                        <option value="len-desc">Length &darr;</option>
+                    </select>
+                </div>
                 <div class="results-content">
                     <div class="progress-bar" id="progressBar">
                         <div class="progress-fill"></div>
@@ -624,19 +675,19 @@
         </main>
 
         <!-- Floating Action Button -->
-        <div class="fab" onclick="showHelp()">
+        <div class="fab" onclick="showHelp()" role="button" tabindex="0" aria-label="Open help">
             <i class="fas fa-question"></i>
         </div>
 
         <!-- Toast Container -->
-        <div class="toast-container" id="toastContainer"></div>
+        <div class="toast-container" id="toastContainer" role="status" aria-live="polite"></div>
 
         <!-- Modal -->
-        <div class="modal" id="helpModal">
+        <div class="modal" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>Wordlist Arsenal Help</h2>
-                    <button class="modal-close" onclick="hideHelp()">
+                    <h2 id="helpModalTitle">Wordlist Arsenal Help</h2>
+                    <button class="modal-close" onclick="hideHelp()" aria-label="Close help dialog">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -646,25 +697,31 @@
                         <p>This tool is designed for authorized security testing and educational purposes only. Users are responsible for ensuring they have proper authorization before testing any systems. Unauthorized access to computer systems is illegal and unethical.</p>
                     </div>
                     <div class="help-section">
+                        <h3>🔥 Ultimate Wordlist</h3>
+                        <p>The banner above the generator tabs has a one-click button that runs every generator at once (recon paths, secrets, cloud buckets, parameters, credentials, usernames, hybrid mutations, API/web-framework paths, and every security payload type) and merges the results into one deduplicated list.</p>
+                    </div>
+                    <div class="help-section">
                         <h3>🛡️ Generator Types</h3>
                         <ul>
-                            <li><strong>Enumeration:</strong> Web directory and file discovery</li>
+                            <li><strong>Enumeration:</strong> Web directory/file discovery, secrets &amp; tokens, cloud storage buckets, parameter names</li>
                             <li><strong>Brute Force:</strong> Password attack wordlists</li>
                             <li><strong>Credentials:</strong> Default username/password combinations</li>
                             <li><strong>Usernames:</strong> Generate username variations</li>
                             <li><strong>Patterns:</strong> Custom pattern-based generation</li>
                             <li><strong>Hybrid:</strong> Combine and mutate existing wordlists</li>
                             <li><strong>API:</strong> Common API endpoint paths</li>
-                            <li><strong>Web Tech:</strong> Framework-specific paths</li>
-                            <li><strong>Security:</strong> Vulnerability testing payloads</li>
+                            <li><strong>Web Tech:</strong> Framework-specific paths (now including Laravel, Django/Flask, Spring Boot, Express, Rails, ASP.NET Core)</li>
+                            <li><strong>Security:</strong> SQLi, XSS, LFI, RFI, Command Injection, XXE, SSRF, NoSQL Injection, SSTI, Open Redirect</li>
                         </ul>
                     </div>
                     <div class="help-section">
                         <h3>📋 Usage Tips</h3>
                         <ul>
-                            <li>Use Quick Actions for common wordlists</li>
+                            <li>Use Quick Actions or the Ultimate Wordlist button for instant coverage</li>
+                            <li>Use "Select All / Select None" in each panel to quickly toggle every option</li>
                             <li>Upload existing wordlists for analysis</li>
                             <li>Combine multiple generators for comprehensive testing</li>
+                            <li>Sort or filter ("Keep Matching") your results before exporting</li>
                             <li>Save frequently used configurations in history</li>
                             <li>Use pattern placeholders for custom generation</li>
                         </ul>

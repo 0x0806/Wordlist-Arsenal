@@ -957,6 +957,146 @@ body {
     transform: scale(1.002);
 }
 
+/* Ultimate Wordlist Banner */
+.ultimate-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-6);
+    padding: var(--space-6) var(--space-8);
+    background: var(--surface-glass-strong);
+    border-bottom: 1px solid var(--border-moderate);
+    position: relative;
+    overflow: hidden;
+    flex-wrap: wrap;
+}
+
+.ultimate-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--gradient-holographic);
+    opacity: 0.06;
+    pointer-events: none;
+}
+
+.ultimate-banner-text {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+    flex: 1 1 320px;
+}
+
+.ultimate-banner-text h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-primary);
+    font-size: var(--text-lg);
+    margin-bottom: var(--space-2);
+}
+
+.ultimate-banner-text h3 i {
+    color: hsl(var(--hue-warning), 90%, 60%);
+}
+
+.ultimate-banner-text p {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    max-width: 640px;
+}
+
+.ultimate-btn {
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+    padding: var(--space-4) var(--space-7);
+    background: var(--gradient-holographic);
+    background-size: 300% 300%;
+    animation: button-gradient 4s ease-in-out infinite;
+    border: none;
+    border-radius: var(--radius-xl);
+    color: white;
+    font-size: var(--text-base);
+    font-weight: var(--font-bold);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    box-shadow: var(--shadow-lg);
+    transition: all var(--duration-normal) var(--ease-out);
+    white-space: nowrap;
+}
+
+.ultimate-btn:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: var(--shadow-2xl), var(--shadow-glow-intense);
+}
+
+.ultimate-btn:active:not(:disabled) {
+    transform: translateY(0) scale(1);
+}
+
+.ultimate-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+    animation-play-state: paused;
+}
+
+/* Per-panel Select All / Select None controls */
+.panel-select-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: calc(-1 * var(--space-3)) 0 var(--space-5) 0;
+}
+
+.select-link {
+    background: none;
+    border: none;
+    color: var(--text-accent);
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.select-link:hover {
+    background: var(--surface-glass);
+    color: var(--text-primary);
+}
+
+.select-sep {
+    color: var(--text-quaternary);
+    font-size: var(--text-xs);
+}
+
+/* Results Toolbar: sort & filter */
+.results-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-6);
+    background: var(--surface-glass);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-wrap: wrap;
+}
+
+.results-filter-input {
+    flex: 1 1 180px;
+    min-width: 0;
+}
+
+.results-sort-select {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 140px;
+    cursor: pointer;
+}
+
 /* Advanced Generator Tabs */
 .generator-tabs {
     display: grid;

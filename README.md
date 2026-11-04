@@ -5,12 +5,15 @@ A comprehensive web-based wordlist generation platform designed for cybersecurit
 
 ## Overview
 
-Wordlist Arsenal is an advanced cybersecurity tool that provides nine specialized wordlist generators for various security testing scenarios. The application features a responsive dark-themed interface with real-time generation capabilities, comprehensive file analysis, and intelligent mutation algorithms.
+Wordlist Arsenal is an advanced cybersecurity tool that provides nine specialized wordlist generators for various security testing scenarios, plus a one-click **Ultimate Wordlist** mode that combines every generator into a single deduplicated list. The application features a responsive dark-themed interface with real-time generation capabilities, comprehensive file analysis, and intelligent mutation algorithms.
 
 ## Features
 
+### 🔥 Ultimate Wordlist Mode
+One button combines **every** generator and data source in the app — recon paths, secrets/tokens, cloud storage bucket names, parameter names, default credentials, common usernames, hybrid password mutations, API/web-framework paths, and all ten security payload categories — into a single deduplicated wordlist, ready to copy, sort, filter, or export.
+
 ### Core Generators
-- **Web Discovery Enumeration**: Directory and file discovery wordlists
+- **Web Discovery Enumeration**: Directory and file discovery wordlists, plus secrets/token file names, cloud storage bucket naming patterns, and common HTTP parameter names for fuzzing
 - **Password Brute Force**: Comprehensive password attack wordlists
 - **Default Credentials**: Extensive database of manufacturer defaults
 - **Username Generation**: Pattern-based username variations
@@ -18,16 +21,19 @@ Wordlist Arsenal is an advanced cybersecurity tool that provides nine specialize
 - **Hybrid Combiner**: Advanced wordlist mutation and combination
 - **API Endpoints**: REST, GraphQL, SOAP, and webhook discovery
 - **Web Technology Paths**: Framework-specific directory structures for WordPress, Drupal, Joomla, Magento, Apache, Nginx, Tomcat, IIS, Laravel, Django/Flask, Spring Boot, Node/Express, Ruby on Rails, and ASP.NET Core
-- **Security Testing**: Vulnerability assessment payloads for SQL Injection, XSS, LFI, RFI, Command Injection, XXE, and SSRF
+- **Security Testing**: Vulnerability assessment payloads for SQL Injection, XSS, LFI, RFI, Command Injection, XXE, SSRF, NoSQL Injection, SSTI, and Open Redirect
 
 ### Advanced Capabilities
 - Real-time wordlist preview and statistics
 - Drag-and-drop file upload analyzer
-- Generation history with local persistence
+- Generation history with local persistence and one-click clearing
 - Advanced filtering and deduplication
 - Multiple export formats (TXT, JSON, CSV)
 - Comprehensive mutation algorithms
 - Pattern-based generation with placeholders
+- Live results sorting (A→Z, Z→A, length) and substring filtering
+- Per-panel "Select All / Select None" checkbox controls
+- Clipboard API with legacy fallback, keyboard navigable help dialog
 - Responsive design for all device types
 
 ## Technical Architecture
@@ -219,9 +225,29 @@ Comprehensive help documentation is available within the application interface. 
 - Some advanced features require modern browser capabilities
 - Local storage has size limitations for history retention
 
+## Recommended Future Improvements
+
+These are not yet implemented, in rough priority order:
+1. **Web Worker generation** - move the heaviest combinatorial work (hybrid mutations, Ultimate Wordlist, character combinations) off the main thread so the UI never blocks on very large configurations.
+2. **Streaming download** - for multi-million-line lists, stream directly to a file via the File System Access API instead of building one giant string in memory.
+3. **IndexedDB history** - `localStorage` has a ~5-10MB ceiling; moving history/stats to IndexedDB would allow storing full wordlists (not just 100-word previews) without risk of quota errors.
+4. **Custom light theme** - the UI is currently dark-only by design; a light theme is possible via the existing CSS custom-property system but needs a full visual pass to avoid contrast regressions.
+5. **Per-category word counts** before generation (e.g. "this will generate ~12,000 words") so users can gauge output size before clicking generate.
+6. **Automated test suite** - a small jsdom/Vitest suite covering each generator and the new toolbar/Ultimate Wordlist logic to prevent future regressions like the ones fixed in 1.1.0.
+7. **Rate-conscious subdomain/API wordlists** - optionally tag entries by likely false-positive risk so users can trim noisy categories for live engagements.
+
 ## Version History
 
-### Current Version: 1.1.0
+### Current Version: 1.2.0
+- Added **Ultimate Wordlist** mode: one button generates a combined, deduplicated wordlist from every generator and data source in the app
+- Added NoSQL Injection, SSTI, and Open Redirect payload categories to Security Testing (10 categories total)
+- Added Secrets & Tokens, Cloud Storage Buckets, and Parameter Names recon wordlists to Web Discovery Enumeration
+- Added live results **sort** (A→Z, Z→A, length) and **substring filter** ("Keep Matching") toolbar above the results textarea
+- Added **Select All / Select None** quick controls to every generator panel
+- Added keyboard support and ARIA labeling for the help dialog and its floating action button
+- Fixed a syntax bug introduced during SSTI payload authoring (unescaped nested quotes) before release
+
+### Version 1.1.0
 - Fixed critical generator crashes caused by mismatched function references in Brute Force and Username generators
 - Added real multi-format export (TXT, JSON, CSV) wired into the Download action
 - Replaced deprecated clipboard API usage with `navigator.clipboard`, with a safe fallback
