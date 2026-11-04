@@ -17,8 +17,8 @@ Wordlist Arsenal is an advanced cybersecurity tool that provides nine specialize
 - **Custom Patterns**: Rule-based wordlist generation
 - **Hybrid Combiner**: Advanced wordlist mutation and combination
 - **API Endpoints**: REST, GraphQL, SOAP, and webhook discovery
-- **Web Technology Paths**: Framework-specific directory structures
-- **Security Testing**: Vulnerability assessment payloads
+- **Web Technology Paths**: Framework-specific directory structures for WordPress, Drupal, Joomla, Magento, Apache, Nginx, Tomcat, IIS, Laravel, Django/Flask, Spring Boot, Node/Express, Ruby on Rails, and ASP.NET Core
+- **Security Testing**: Vulnerability assessment payloads for SQL Injection, XSS, LFI, RFI, Command Injection, XXE, and SSRF
 
 ### Advanced Capabilities
 - Real-time wordlist preview and statistics
@@ -221,7 +221,18 @@ Comprehensive help documentation is available within the application interface. 
 
 ## Version History
 
-### Current Version: 1.0.0
+### Current Version: 1.1.0
+- Fixed critical generator crashes caused by mismatched function references in Brute Force and Username generators
+- Added real multi-format export (TXT, JSON, CSV) wired into the Download action
+- Replaced deprecated clipboard API usage with `navigator.clipboard`, with a safe fallback
+- Hardened history rendering against HTML/script injection from uploaded filenames and other user-controlled data
+- Added a safety cap (1,000,000 entries) with user feedback to prevent the browser from freezing on very large combinatorial generations
+- Added Command Injection, XXE, and SSRF payload categories to Security Testing
+- Added Laravel, Django/Flask, Spring Boot, Node/Express, Ruby on Rails, and ASP.NET Core path sets to Web Technology Paths
+- Added a one-click Clear History action
+- File input now resets after upload so the same file can be re-analyzed
+
+### Version 1.0.0
 - Initial release with nine specialized generators
 - Advanced UI/UX with responsive design
 - Comprehensive wordlist analysis capabilities

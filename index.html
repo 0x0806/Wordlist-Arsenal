@@ -71,7 +71,12 @@
                 </div>
 
                 <div class="history">
-                    <h3>Generation History</h3>
+                    <div class="history-header">
+                        <h3>Generation History</h3>
+                        <button class="history-clear-btn" onclick="clearHistory()" title="Clear history">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                     <div class="history-list" id="historyList">
                         <div class="history-empty">No history yet</div>
                     </div>
@@ -470,6 +475,33 @@
                                     <span>IIS</span>
                                 </label>
                             </div>
+                            <div class="config-section">
+                                <h3>App Frameworks</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tech-laravel">
+                                    <span>Laravel</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tech-djangoflask">
+                                    <span>Django / Flask</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tech-spring">
+                                    <span>Spring Boot</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tech-express">
+                                    <span>Node / Express</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tech-rails">
+                                    <span>Ruby on Rails</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tech-aspnet">
+                                    <span>ASP.NET Core</span>
+                                </label>
+                            </div>
                         </div>
                         <button class="generate-btn" onclick="generateWebTech()">
                             <i class="fas fa-code-branch"></i>
@@ -498,6 +530,18 @@
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="sec-rfi">
                                     <span>Remote File Inclusion</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sec-cmdi">
+                                    <span>Command Injection</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sec-xxe">
+                                    <span>XXE Injection</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="sec-ssrf">
+                                    <span>SSRF Payloads</span>
                                 </label>
                             </div>
                             <div class="config-section">
@@ -537,6 +581,11 @@
                             <i class="fas fa-copy"></i>
                             Copy
                         </button>
+                        <select id="exportFormat" class="config-input export-format-select" title="Export format">
+                            <option value="txt">TXT</option>
+                            <option value="json">JSON</option>
+                            <option value="csv">CSV</option>
+                        </select>
                         <button class="action-btn" onclick="downloadWordlist()">
                             <i class="fas fa-download"></i>
                             Download

